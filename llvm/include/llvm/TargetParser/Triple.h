@@ -106,6 +106,7 @@ public:
     renderscript32, // 32-bit RenderScript
     renderscript64, // 64-bit RenderScript
     ve,             // NEC SX-Aurora Vector Engine
+    JRISCdev,          //development version of the JRISC arch
     LastArchType = ve
   };
   enum SubArchType {
@@ -180,6 +181,7 @@ public:
     Mesa,
     SUSE,
     OpenEmbedded,
+    TychoComp, //TODO find spelling of computational
     LastVendorType = OpenEmbedded
   };
   enum OSType {
@@ -225,6 +227,7 @@ public:
     Emscripten,
     ShaderModel, // DirectX ShaderModel
     LiteOS,
+    JDOS, //Jeffs Discoperating system
     LastOSType = LiteOS
   };
   enum EnvironmentType {

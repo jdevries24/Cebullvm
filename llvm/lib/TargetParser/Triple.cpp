@@ -84,6 +84,7 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case x86_64:         return "x86_64";
   case xcore:          return "xcore";
   case xtensa:         return "xtensa";
+  case JRISCdev:       return "JRISCdev";
   }
 
   llvm_unreachable("Invalid ArchType!");
@@ -175,6 +176,7 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case dxil:        return "dx";
 
   case xtensa:      return "xtensa";
+  case JRISCdev: return "JRISCdev";
   }
 }
 
@@ -196,6 +198,7 @@ StringRef Triple::getVendorTypeName(VendorType Kind) {
   case PC: return "pc";
   case SCEI: return "scei";
   case SUSE: return "suse";
+  case TychoComp: return "TychoComp";
   }
 
   llvm_unreachable("Invalid VendorType!");
@@ -245,6 +248,7 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case ZOS: return "zos";
   case ShaderModel: return "shadermodel";
   case LiteOS: return "liteos";
+  case JDOS:return "JDOS";
   }
 
   llvm_unreachable("Invalid OSType");
@@ -852,6 +856,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::ve:
   case Triple::xcore:
   case Triple::xtensa:
+  case Triple::JRISCdev:
     return Triple::ELF;
 
   case Triple::ppc64:
@@ -1433,6 +1438,7 @@ static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::x86:
   case llvm::Triple::xcore:
   case llvm::Triple::xtensa:
+  case llvm::Triple::JRISCdev:
     return 32;
 
   case llvm::Triple::aarch64:
@@ -1524,6 +1530,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::x86:
   case Triple::xcore:
   case Triple::xtensa:
+  case Triple::JRISCdev:
     // Already 32-bit.
     break;
 
@@ -1575,6 +1582,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::tcele:
   case Triple::xcore:
   case Triple::xtensa:
+  case Triple::JRISCdev:
     T.setArch(UnknownArch);
     break;
 

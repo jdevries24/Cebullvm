@@ -446,6 +446,7 @@ set(LLVM_ALL_TARGETS
   WebAssembly
   X86
   XCore
+  JRISCdev
   )
 
 # List of targets with JIT support:
