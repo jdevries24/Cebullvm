@@ -29,3 +29,8 @@ MCAsmBackend *createJRISCdevAsmBackend(const Target &T,
 MCTargetStreamer *
 JRISCdevObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
 }
+
+#define GET_REGINFO_ENUM
+#include "JRISCdevGenRegisterInfo.inc"
+
+#endif

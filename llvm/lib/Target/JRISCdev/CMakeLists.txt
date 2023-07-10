@@ -1,11 +1,14 @@
 add_llvm_component_group(JRISCdev)
 set(LLVM_TARGET_DEFINITIONS JRISCdev.td)
 tablegen(LLVM JRISCdevGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM JRISCdevGenAsmWriter.inc -gen-asm-writer)
+tablegen(LLVM JRISCGenDAGISel.inc -gen-dag-isel)
+tablegen(LLVM JRISCdevGenCallingConv.inc -gen-callingconv)
 
 add_public_tablegen_target(JRISCdevCommonTableGen)
 
 
-add_llvm_target(JRISCdevCODEGEN
+add_llvm_target(JRISCdevCodeGen
     JRISCdevTargetMachine.cpp
 
     LINK_COMPONENTS

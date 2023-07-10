@@ -1,4 +1,5 @@
 #include "TargetInfo/JRISCdevTargetInfo.h"
+#include "MCTargetDesc/JRISCdevTargetDesc.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -11,8 +12,13 @@ static MCInstrInfo *createJRISCdevMCInstrInfo() {
     return nullptr;
 }
 
+#define GET_REGINFO_MC_DESC
+#include "JRISCdevGenRegisterInfo.inc"
+
 static MCRegisterInfo *createJRISCdevMCRegisterInfo(const Triple &TT) {
-    return nullptr;
+    MCRegisterInfo *X = new MCRegisterInfo();
+    InitJRISCdevMCRegisterInfo(X,0);
+    return X;
 }
 
 static MCAsmInfo *createJRISCdevMCAsmInfo(const MCRegisterInfo &MRI,

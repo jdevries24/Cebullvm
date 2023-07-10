@@ -4,7 +4,7 @@
 
 namespace llvm{
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeJRISCdevTargetMachine() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeJRISCdevTarget() {
   RegisterTargetMachine<JRISCdevTargetMachine> X(getJRISCdev());
 }
 
