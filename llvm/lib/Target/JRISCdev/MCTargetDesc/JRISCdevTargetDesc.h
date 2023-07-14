@@ -17,7 +17,6 @@ class MCObjectTargetWriter;
 class MCStreamer;
 class MCTargetStreamer;
 
-/// Creates a machine code emitter for MSP430.
 MCCodeEmitter *createJRISCdevCodeEmitter(const MCInstrInfo &MCII,
                                          MCContext &Ctx);
 
@@ -32,5 +31,12 @@ JRISCdevObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
 
 #define GET_REGINFO_ENUM
 #include "JRISCdevGenRegisterInfo.inc"
+
+#define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_MC_HELPER_DECLS
+#include "JRISCdevGenInstrInfo.inc"
+
+#define GET_SUBTARGETINFO_ENUM
+#include "JRISCdevGenSubtargetInfo.inc"
 
 #endif

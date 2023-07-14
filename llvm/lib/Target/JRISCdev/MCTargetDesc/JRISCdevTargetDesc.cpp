@@ -5,15 +5,25 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
-
 using namespace llvm;
+
 
 static MCInstrInfo *createJRISCdevMCInstrInfo() {
     return nullptr;
 }
 
+using namespace llvm;
+
+#define GET_INSTRINFO_MC_DESC
+#define ENABLE_INSTR_PREDICATE_VERIFIER
+#include "JRISCdevGenInstrInfo.inc"
+
+#define GET_SUBTARGETINFO_MC_DESC
+#include "JRISCdevGenSubtargetInfo.inc"
+
 #define GET_REGINFO_MC_DESC
 #include "JRISCdevGenRegisterInfo.inc"
+
 
 static MCRegisterInfo *createJRISCdevMCRegisterInfo(const Triple &TT) {
     MCRegisterInfo *X = new MCRegisterInfo();

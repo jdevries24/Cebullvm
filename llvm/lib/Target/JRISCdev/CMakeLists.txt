@@ -4,13 +4,19 @@ tablegen(LLVM JRISCdevGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM JRISCdevGenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM JRISCGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM JRISCdevGenCallingConv.inc -gen-callingconv)
+tablegen(LLVM JRISCdevGenSubtargetInfo.inc -gen-subtarget)
+tablegen(LLVM JRISCdevGenInstrInfo.inc -gen-instr-info)
 
 add_public_tablegen_target(JRISCdevCommonTableGen)
 
 
 add_llvm_target(JRISCdevCodeGen
+    JRISCdevFrameLowering.cpp
+    JRISCdevRegisterInfo.cpp
+    JRISCdevISelLowering.cpp
+    JRISCdevSubtarget.cpp
     JRISCdevTargetMachine.cpp
-
+    
     LINK_COMPONENTS
     Analysis
     AsmPrinter

@@ -13,10 +13,11 @@ static CodeModel::Model getCM(std::optional<CodeModel::Model> CM){
 }
 
 JRISCdevTargetMachine::JRISCdevTargetMachine(const Target &T, const Triple &TT,
-                                       StringRef CPU, StringRef FS,
+                                       StringRef CPU,StringRef FS,
                                        const TargetOptions &Options,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
-                                       CodeGenOpt::Level OL, bool JIT):LLVMTargetMachine(T,"E-p:32:1-i:32:1",TT,CPU,FS,Options,Reloc::PIC_,getCM(CM),OL){
+                                       CodeGenOpt::Level OL, bool JIT):LLVMTargetMachine(T,"E-p:32:32-i32:32-i16:16-i8:8-i1:8",TT,CPU,FS,Options,Reloc::PIC_,getCM(CM),OL),
+                                       subtarget(TT,CPU.str(),FS.str(),*this){
                      }
 }
