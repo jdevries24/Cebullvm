@@ -223,6 +223,8 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_Invalid: return "<<invalid>>";
   case VK_None: return "<<none>>";
 
+  case VK_JRISCdev:return "JRISC";
+
   case VK_DTPOFF: return "DTPOFF";
   case VK_DTPREL: return "DTPREL";
   case VK_GOT: return "GOT";

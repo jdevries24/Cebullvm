@@ -195,6 +195,8 @@ public:
     VK_None,
     VK_Invalid,
 
+    VK_JRISCdev,
+
     VK_GOT,
     VK_GOTOFF,
     VK_GOTREL,

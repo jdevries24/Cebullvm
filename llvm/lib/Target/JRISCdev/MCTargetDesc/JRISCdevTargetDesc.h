@@ -2,6 +2,8 @@
 #define LLVM_LIB_TARGET_JRISCDEV_MCTARGETDESC_JRISCDEVTARGETDESC_H
 
 #include "llvm/Support/DataTypes.h"
+#include "MCTargetDesc/JRISCdevInstPrinter.h"
+#include "MCTargetDesc/JRISCdevAsmInfo.h"
 #include <memory>
 
 namespace llvm {

@@ -1,7 +1,7 @@
 
 #include "JRISCdevISelLowering.h"
-#include "JRISCdevTargetMachine.h"
 #include "JRISCdevRegisterInfo.h"
+#include "JRISCdevSubtarget.h"
 #include "MCTargetDesc/JRISCdevTargetDesc.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -29,4 +29,11 @@ using namespace llvm;
 JRISCdevILowering::JRISCdevILowering(const TargetMachine &TM,const JRISCdevSubtarget &STI):TargetLowering(TM)
     {
         addRegisterClass(MVT::i32,&JRISC::GPregsRegClass);
+        addRegisterClass(MVT::i16,&JRISC::GPregsRegClass);
+        addRegisterClass(MVT::i8,&JRISC::GPregsRegClass);
+        computeRegisterProperties(STI.getRegisterInfo());
+        setOperationAction(ISD::ADD,MVT::i16,Promote);
+        setOperationAction(ISD::ADD,MVT::i8,Promote);
+        
+
     }

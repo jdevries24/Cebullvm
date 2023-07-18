@@ -21,7 +21,7 @@ extern "C" {
   // Declare all of the target-initialization functions that are available.
 #define LLVM_TARGET(TargetName) void LLVMInitialize##TargetName##TargetInfo();
 #include "llvm/Config/Targets.def"
-
+void LLVMInitializeJRISCdevTargetInfo();
 #define LLVM_TARGET(TargetName) void LLVMInitialize##TargetName##Target();
 #include "llvm/Config/Targets.def"
 

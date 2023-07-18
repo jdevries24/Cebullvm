@@ -21,5 +21,5 @@ void JRISCdevSubtarget::anchor(){}
 
 JRISCdevSubtarget::JRISCdevSubtarget(const Triple &TT, const std::string &CPU,
                                  const std::string &FS, const TargetMachine &TM):JRISCdevGenSubtargetInfo(TT,CPU,CPU,FS),
-                                 ILower(TM,*this){
+                                 RegInfo(),ILower(TM,*this){
                                  }

@@ -17,6 +17,9 @@ class JRISCdevTargetMachine : public LLVMTargetMachine{
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOpt::Level OL, bool JIT);
+          const JRISCdevSubtarget *getSubtargetImpl(const Function &F) const override {
+    return &subtarget;
+  }
 };
 }
 

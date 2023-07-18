@@ -13,7 +13,7 @@ foreach i = 1 - 13 in {
 def SP:GPRegister<14,"SP">;
 def RA:GPRegister<15,"RA">;
 
-def GPregs : RegisterClass<"JRISC",[i32,i16,i8],32,(add (sequence "R%i",0,13), SP, RA)>;
+def GPregs : RegisterClass<"JRISC",[i32,i16,i8],32,(add (sequence "R%i",0,13),SP,RA)>;
 
 def GPReg : RegisterOperand<GPregs>{
     let GIZeroRegister = R0;

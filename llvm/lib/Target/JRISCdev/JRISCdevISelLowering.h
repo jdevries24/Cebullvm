@@ -6,7 +6,7 @@
 
 namespace llvm{
     class JRISCdevSubtarget;
-    class JRISCdevILowering:TargetLowering{
+    class JRISCdevILowering:public TargetLowering{
         public:
             explicit JRISCdevILowering(const TargetMachine &TM,const JRISCdevSubtarget &STI);
 

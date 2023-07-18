@@ -2,6 +2,7 @@
 #define LLVM_LIB_TARGET_JRISCdev_JRISCdevSubtarget_H
 
 #include "JRISCdevISelLowering.h"
+#include "JRISCdevRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -12,15 +13,21 @@
 
 namespace llvm{
 class StringRef;
-
-class JRISCdevSubtarget:JRISCdevGenSubtargetInfo{
+class JRISCdevSubtarget:public JRISCdevGenSubtargetInfo{
+    private:
+        JRISCdevILowering ILower;
+        JRISCdevRegisterInfo RegInfo;
+        virtual void anchor();
     public:
         JRISCdevSubtarget(const Triple &TT, const std::string &CPU,
                                  const std::string &FS, const TargetMachine &TM);
         void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
-    private:
-        JRISCdevILowering ILower;
-        virtual void anchor();
+        const JRISCdevRegisterInfo *getRegisterInfo() const override{
+            return &RegInfo;
+        }
+        const JRISCdevILowering *getTargetLowering() const override{
+            return &ILower;
+        }
 };
 }
 

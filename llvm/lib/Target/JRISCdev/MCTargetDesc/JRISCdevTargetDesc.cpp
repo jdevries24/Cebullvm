@@ -8,11 +8,6 @@
 using namespace llvm;
 
 
-static MCInstrInfo *createJRISCdevMCInstrInfo() {
-    return nullptr;
-}
-
-using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
 #define ENABLE_INSTR_PREDICATE_VERIFIER
@@ -24,6 +19,12 @@ using namespace llvm;
 #define GET_REGINFO_MC_DESC
 #include "JRISCdevGenRegisterInfo.inc"
 
+static MCInstrInfo *createJRISCdevMCInstrInfo() {
+  MCInstrInfo *X = new MCInstrInfo();
+  InitJRISCdevMCInstrInfo(X);
+  return X;
+}
+
 
 static MCRegisterInfo *createJRISCdevMCRegisterInfo(const Triple &TT) {
     MCRegisterInfo *X = new MCRegisterInfo();
@@ -34,11 +35,13 @@ static MCRegisterInfo *createJRISCdevMCRegisterInfo(const Triple &TT) {
 static MCAsmInfo *createJRISCdevMCAsmInfo(const MCRegisterInfo &MRI,
                                         const Triple &TT,
                                         const MCTargetOptions &Options) {
-    return nullptr;
+    MCAsmInfo *X = new JRISCdevMCAsmInfo(TT);
+    return X;
 }
 
 static MCSubtargetInfo *createJRISCdevMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
-    return nullptr;
+    MCSubtargetInfo *X = createJRISCdevMCSubtargetInfoImpl(TT,CPU,CPU,FS);
+    return X;
 }
 
 static MCInstPrinter *createJRISCdevInstPrinter(const Triple &T,
@@ -46,7 +49,8 @@ static MCInstPrinter *createJRISCdevInstPrinter(const Triple &T,
                                                 const MCAsmInfo &MAI,
                                                 const MCInstrInfo &MII,
                                                 const MCRegisterInfo &MRI) {
-                                                    return nullptr;
+    MCInstPrinter *X = new JRISCdevInstPrinter(MAI,MII,MRI);
+    return X;
                                                 }
 
 MCCodeEmitter *createJRISCdevMCCodeEmitter(const MCInstrInfo &MCII,
@@ -74,8 +78,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeJRISCdevTargetMC() {
   TargetRegistry::RegisterMCRegInfo(T, createJRISCdevMCRegisterInfo);
   TargetRegistry::RegisterMCSubtargetInfo(T, createJRISCdevMCSubtargetInfo);
   TargetRegistry::RegisterMCInstPrinter(T, createJRISCdevInstPrinter);
-  TargetRegistry::RegisterMCCodeEmitter(T, createJRISCdevMCCodeEmitter);
-  TargetRegistry::RegisterMCAsmBackend(T, createJRISCdevMCAsmBackend);
-  TargetRegistry::RegisterObjectTargetStreamer(
-      T, createJRISCdevObjectTargetStreamer);
+  //TargetRegistry::RegisterMCCodeEmitter(T, createJRISCdevMCCodeEmitter);
+  //TargetRegistry::RegisterMCAsmBackend(T, createJRISCdevMCAsmBackend);
+  //TargetRegistry::RegisterObjectTargetStreamer(T, createJRISCdevObjectTargetStreamer);
 }
