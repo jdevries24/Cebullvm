@@ -4,6 +4,7 @@
 #include "llvm/Support/DataTypes.h"
 #include "MCTargetDesc/JRISCdevInstPrinter.h"
 #include "MCTargetDesc/JRISCdevAsmInfo.h"
+
 #include <memory>
 
 namespace llvm {
@@ -18,6 +19,8 @@ class MCTargetOptions;
 class MCObjectTargetWriter;
 class MCStreamer;
 class MCTargetStreamer;
+class MCInstPrinter;
+class formatted_raw_ostream;
 
 MCCodeEmitter *createJRISCdevCodeEmitter(const MCInstrInfo &MCII,
                                          MCContext &Ctx);
@@ -29,6 +32,8 @@ MCAsmBackend *createJRISCdevAsmBackend(const Target &T,
 
 MCTargetStreamer *
 JRISCdevObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
+
+
 }
 
 #define GET_REGINFO_ENUM

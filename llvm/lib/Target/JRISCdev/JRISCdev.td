@@ -1,13 +1,18 @@
 include "llvm/Target/Target.td"
 
-def :Processor<"generic",NoItineraries,[]>;
+
 
 include "JRISCRegisterInfo.td"
 include "JRISCCallingConv.td"
 include "JRISCInstrInfo.td"
 
-def JRISCInstrInfo : InstrInfo;
+def JRISCdevInstrInfo : InstrInfo;
+def JRISCdevAsmPrinter : AsmWriter;
+
+def :Processor<"generic",NoItineraries,[]>;
+
 
 def JRISCdev:Target{
-    let InstructionSet = JRISCInstrInfo;
+    let InstructionSet = JRISCdevInstrInfo;
+    let AssemblyWriters = [JRISCdevAsmPrinter];
 }

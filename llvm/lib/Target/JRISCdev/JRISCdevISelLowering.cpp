@@ -31,10 +31,141 @@ using namespace llvm;
 
 JRISCdevILowering::JRISCdevILowering(const TargetMachine &TM,const JRISCdevSubtarget &STI):TargetLowering(TM)
     {
+        static const MVT TV[] = {MVT::i1,MVT::i8,MVT::i16,MVT::i32};
+        ArrayRef<MVT> xVT(TV,4);
         addRegisterClass(MVT::i32,&JRISCdev::GPregsRegClass);
         computeRegisterProperties(STI.getRegisterInfo());
+        setJumpIsExpensive(false);
+        setOperationAction(ISD::SELECT_CC,MVT::i32,Expand);
+        setOperationAction(ISD::ROTL,MVT::i32,Custom);
+        setOperationAction(ISD::ROTR,MVT::i32,Custom);
+        setOperationAction(ISD::BR_CC,MVT::i32,Custom);
+        setOperationAction(ISD::Constant,MVT::i32,Custom);
+        setOperationAction(ISD::GlobalAddress,MVT::i32,Custom);
+        setOperationAction(ISD::SIGN_EXTEND_INREG,MVT::i8,Custom);
+        setOperationAction(ISD::SIGN_EXTEND_INREG,MVT::i16,Custom);
     }
 
+SDValue JRISCdevILowering::LowerConst(SDValue Op,SelectionDAG &DAG) const{
+    ConstantSDNode *Const = cast<ConstantSDNode>(Op.getNode());
+    if(Const->getSExtValue() == 0){
+      return DAG.getRegister(JRISCdev::R0,MVT::i32);
+    }  
+    else{
+      return Op;
+    }
+}
+
+SDValue JRISCdevILowering::LowerGlobalAddr(SDValue Op,SelectionDAG &DAG,SDLoc dl) const{
+  EVT VT = Op.getValueType();
+  GlobalAddressSDNode *GloabalAdrr = cast<GlobalAddressSDNode>(Op.getNode());
+  SDValue TargetAddr = DAG.getTargetGlobalAddress(GloabalAdrr->getGlobal(),dl,MVT::i32);
+  return DAG.getNode(JRISCdevID::LOAD_SYM,dl,VT,TargetAddr);
+}
+
+ISD::CondCode JRISCdevILowering::getCondCode(ISD::CondCode CC) const{
+  switch(CC){
+    case ISD::SETGE:
+      return ISD::SETLT;
+    case ISD::SETOGE:
+      return ISD::SETOLT;
+    case ISD::SETUGE:
+      return ISD::SETULT;
+    case ISD::SETLE:
+      return ISD::SETGT;
+    case ISD::SETOLE:
+      return ISD::SETUGT;
+    case ISD::SETULE:
+      return ISD::SETUGT;
+    default:
+      return CC;
+  }
+}
+
+bool JRISCdevILowering::needsSwap(ISD::CondCode CC) const{
+  switch(CC){
+    case ISD::SETGE:
+    case ISD::SETUGE:
+    case ISD::SETLE:
+    case ISD::SETULE:
+      return true;
+    default:
+      return false;
+  }
+}
+
+SDValue JRISCdevILowering::getCMP(SDValue Op,SelectionDAG &DAG,SDLoc dl,ISD::CondCode code,bool reversed) const{
+  if(reversed){
+    return DAG.getNode(ISD::BR_CC,dl,Op.getValueType(),Op.getOperand(0),DAG.getCondCode(code),Op.getOperand(3),Op.getOperand(2),Op.getOperand(4));
+  }
+  else{
+    return DAG.getNode(ISD::BR_CC,dl,Op.getValueType(),Op.getOperand(0),DAG.getCondCode(code),Op.getOperand(2),Op.getOperand(3),Op.getOperand(4));
+  }
+}
+
+SDValue JRISCdevILowering::LowerCMP(SDValue Op,SelectionDAG &DAG,SDLoc dl) const{
+  CondCodeSDNode *cc = cast<CondCodeSDNode>(Op.getOperand(1).getNode());
+  return getCMP(Op,DAG,dl,getCondCode(cc->get()),needsSwap(cc->get()));
+  /*
+  switch(cc->get()){
+    case ISD::SETGE:
+      Op = swapCMP(Op,DAG,dl,ISD::SETLT);
+      break;
+    case ISD::SETOGE:
+      Op = swapCMP(Op,DAG,dl,ISD::SETOLT);
+      break;
+    case ISD::SETUGE:
+      Op = swapCMP(Op,DAG,dl,ISD::SETULT);
+      break;
+    case ISD::SETULE:
+      Op = swapCMP(Op,DAG,dl,ISD::SETUGT);
+      break;
+    case ISD::SETEQ:
+    case ISD::SETLT:
+    case ISD::SETNE:
+    case ISD::SETGT:
+    case ISD::SETUNE:
+    case ISD::SETULT:
+    case ISD::SETUGT:
+    case ISD::SETUEQ:
+      return Op;
+    default:
+      dbgs() << "Unknown cond code\n";
+      cc->dump();
+      llvm_unreachable("Unknown cond code");
+  }
+  return Op;
+  */
+}
+
+SDValue JRISCdevILowering::LowerOperation(SDValue Op,SelectionDAG &DAG) const {
+  SDLoc dl(Op.getNode());
+  switch(Op.getOpcode()){
+    default:
+      llvm_unreachable("Unimplemented custom op");
+    case ISD::ROTL:
+      
+      return DAG.getNode(ISD::SHL,dl,Op.getValueType(),Op.getNode()->ops());
+    case ISD::SRA:
+    case ISD::ROTR:
+      return DAG.getNode(ISD::SRL,dl,Op.getValueType(),Op.getNode()->ops());
+    case ISD::BR_CC:
+      return LowerCMP(Op,DAG,dl);
+    case ISD::Constant:
+      return LowerConst(Op,DAG);
+    case ISD::GlobalAddress:
+      return LowerGlobalAddr(Op,DAG,dl);
+    case ISD::SIGN_EXTEND_INREG:
+    case ISD::SIGN_EXTEND:
+      return Op.getOperand(0);
+  }
+}
+
+
+MachineBasicBlock *JRISCdevILowering::EmitInstrWithCustomInserter(MachineInstr &MI,MachineBasicBlock *BB) const{
+  assert(0 && "NO implemeneted phudos");
+  return BB;
+}
 
 
 SDValue JRISCdevILowering::LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
@@ -45,8 +176,7 @@ SDValue JRISCdevILowering::LowerFormalArguments(SDValue Chain, CallingConv::ID C
         CCState CCInfo(CallConv,isVarArg,DAG.getMachineFunction(),ArgLocs,*DAG.getContext());
         CCInfo.AnalyzeFormalArguments(Ins,JRISC_CC);
         MachineFunction &MF = DAG.getMachineFunction();
-        SDValue ArgValue;
-        for(auto VA : ArgLocs){
+        for(auto &VA : ArgLocs){
             if(VA.isRegLoc()){
                 EVT RegVT = VA.getLocVT();
                 const TargetRegisterClass *RC;
@@ -56,15 +186,16 @@ SDValue JRISCdevILowering::LowerFormalArguments(SDValue Chain, CallingConv::ID C
                 else{
                     llvm_unreachable("RegVT not supported?");
                 }
-                unsigned Reg = MF.addLiveIn(VA.getLocReg(),RC);
-                ArgValue = DAG.getCopyFromReg(Chain,dl,Reg,RegVT);
+                const unsigned VReg = MF.getRegInfo().createVirtualRegister(RC);
+                MF.getRegInfo().addLiveIn(VA.getLocReg(),VReg);
+                SDValue ArgValue = DAG.getCopyFromReg(Chain,dl,VReg,RegVT);
                 InVals.push_back(ArgValue);
+                continue;
             }
             else{
                 assert(VA.isMemLoc() && "Only registers or stack passing");
                 unsigned offset = VA.getLocMemOffset();
                 MachineFrameInfo &MFI = MF.getFrameInfo();
-                offset += MFI.hasCalls() ? 4 : 0;
                 const int FI = MFI.CreateFixedObject(4,offset,true);
                 EVT PtrTy = getPointerTy(DAG.getDataLayout());
                 SDValue FIPtr = DAG.getFrameIndex(FI,PtrTy);
@@ -96,7 +227,8 @@ SDValue JRISCdevILowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
   CCInfo.AnalyzeCallOperands(Outs, JRISC_CC);
-  Chain = DAG.getCALLSEQ_START(Chain,CCInfo.getStackSize(),0,Loc);
+  const unsigned NumBytes = CCInfo.getStackSize();
+  Chain = DAG.getCALLSEQ_START(Chain,NumBytes,0,Loc);
   SmallVector<std::pair<unsigned,SDValue>,8> RegsToPass;
   SmallVector<SDValue,16> MemOpChains;
   for(unsigned i = 0,size = ArgLocs.size();i < size;i+=1){
@@ -121,8 +253,9 @@ SDValue JRISCdevILowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Inflag = Chain.getValue(1);
   }
 
-  GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
-  Callee = DAG.getGlobalAddress(G->getGlobal(),Loc,getPointerTy(DAG.getDataLayout()),0);
+  if(GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)){
+    Callee = DAG.getGlobalAddress(G->getGlobal(),Loc,getPointerTy(DAG.getDataLayout()),0);
+  }
   std::vector<SDValue> Ops;
   Ops.push_back(Chain);
   Ops.push_back(Callee);
@@ -148,7 +281,7 @@ SDValue JRISCdevILowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Chain = DAG.getNode(JRISCdevID::CAL, Loc, NodeTys, Ops);
   Inflag = Chain.getValue(1);
 
-  Chain = DAG.getCALLSEQ_END(Chain,CCInfo.getStackSize(),0,Inflag,Loc);
+  Chain = DAG.getCALLSEQ_END(Chain,NumBytes,0,Inflag,Loc);
   if(!Ins.empty()){
     Inflag = Chain.getValue(1);
   }
@@ -189,6 +322,7 @@ bool JRISCdevILowering::CanLowerReturn(CallingConv::ID CallConv,
                 }
                 return true;
                }
+               
 SDValue JRISCdevILowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                               bool isVarArg,
                               const SmallVectorImpl<ISD::OutputArg> & Outs,
@@ -209,9 +343,10 @@ SDValue JRISCdevILowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // Copy the result values into the output registers.
   for (unsigned i = 0, e = RVLocs.size(); i < e; ++i) {
     CCValAssign &VA = RVLocs[i];
+    //Register retReg = DAG.getMachineFunction().addLiveIn(VA.getLocReg(),&JRISCdev::GPregsRegClass);
     assert(VA.isRegLoc() && "Can only return in registers!");
 
-    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), OutVals[i], Flag);
+    Chain = DAG.getCopyToReg(Chain, dl,VA.getLocReg(), OutVals[i], Flag);
 
     Flag = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));

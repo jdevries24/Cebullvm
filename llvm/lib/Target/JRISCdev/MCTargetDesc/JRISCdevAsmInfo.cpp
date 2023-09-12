@@ -2,16 +2,19 @@
 
 using namespace llvm;
 
-void JRISCdevMCAsmInfo::anchor(){}
+//void JRISCdevMCAsmInfo::anchor(){}
 
 JRISCdevMCAsmInfo::JRISCdevMCAsmInfo(const Triple &TT){
     LabelSuffix = "";
-    CommentString = "#";
-    AsciiDirective = "B";
-    ZeroDirective = "ZERO";
+    CommentString = "# ";
+    AsciiDirective = "B ";
+    ZeroDirective = "ZERO ";
     IsLittleEndian = false;
-    GlobalDirective = "@";
-    Data8bitsDirective = "B";
-    Data16bitsDirective = "H";
-    Data32bitsDirective = "W";
+    PrivateLabelPrefix = ".";
+    Data8bitsDirective = "B ";
+    Data16bitsDirective = "H ";
+    Data32bitsDirective = "W ";
+    HasDotTypeDotSizeDirective = false;
+    HasFunctionAlignment = false; 
+    AllowAtInName = true;
 }

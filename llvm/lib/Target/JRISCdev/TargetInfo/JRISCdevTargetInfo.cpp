@@ -8,11 +8,7 @@ Target &llvm::getJRISCdev(){
     return JRISCtarget;
 }
 
-void DUMP(){
-  dbgs() << "HEAR!!!!";
-}
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeJRISCdevTargetInfo() {
   RegisterTarget<Triple::JRISCdev, /*HasJIT=*/false> X(getJRISCdev(),
                                                     "JRISCdev", "A simple risc arch", "JDOS");
-  DUMP();
 }

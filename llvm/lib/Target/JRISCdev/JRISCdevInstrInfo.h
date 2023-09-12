@@ -13,10 +13,6 @@ namespace llvm{
     public:
         JRISCdevInstrInfo();
         const JRISCdevRegisterInfo &getRegisterInfo() const {return RI;};
-        virtual unsigned isStoreToStackSlot(const MachineInstr &MI,
-                                      int &FrameIndex) const override;
-        virtual unsigned isLoadFromStackSlot(const MachineInstr &MI,
-                                       int &FrameIndex) const override;
 
         virtual void copyPhysReg(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI, const DebugLoc &DL,

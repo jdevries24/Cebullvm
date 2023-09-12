@@ -3,10 +3,13 @@
 
 #include "JRISCdevISelLowering.h"
 #include "JRISCdevRegisterInfo.h"
+#include "JRISCdevInstrInfo.h"
+#include "JRISCdevFrameLowering.h"
 #include "llvm/CodeGen/SelectionDAGTargetInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include <string>
+
 
 #define GET_SUBTARGETINFO_HEADER
 #include "JRISCdevGenSubtargetInfo.inc"
@@ -14,10 +17,12 @@
 namespace llvm{
 class StringRef;
 class JRISCdevSubtarget:public JRISCdevGenSubtargetInfo{
+    virtual void anchor();
     private:
         JRISCdevILowering ILower;
         JRISCdevRegisterInfo RegInfo;
-        virtual void anchor();
+        JRISCdevInstrInfo IInfo;
+        JRISCdevFrameLowering FlInfo;
     public:
         JRISCdevSubtarget(const Triple &TT, const std::string &CPU,
                                  const std::string &FS, const TargetMachine &TM);
@@ -28,6 +33,9 @@ class JRISCdevSubtarget:public JRISCdevGenSubtargetInfo{
         const JRISCdevILowering *getTargetLowering() const override{
             return &ILower;
         }
+        const JRISCdevInstrInfo *getInstrInfo() const override { return &IInfo; }
+        const JRISCdevFrameLowering *getFrameLowering() const override {return &FlInfo;}
+
 };
 }
 

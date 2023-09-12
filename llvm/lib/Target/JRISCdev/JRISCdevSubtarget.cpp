@@ -12,6 +12,7 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "JRISCdev-subtarget"
 
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
@@ -21,5 +22,5 @@ void JRISCdevSubtarget::anchor(){}
 
 JRISCdevSubtarget::JRISCdevSubtarget(const Triple &TT, const std::string &CPU,
                                  const std::string &FS, const TargetMachine &TM):JRISCdevGenSubtargetInfo(TT,CPU,CPU,FS),
-                                 RegInfo(),ILower(TM,*this){
+                                 RegInfo(),ILower(TM,*this),FlInfo(){
                                  }

@@ -19,7 +19,7 @@ using namespace llvm;
 
 void JRISCdevInstrInfo::anchor(){}
 
-JRISCdevInstrInfo::JRISCdevInstrInfo():JRISCdevGenInstrInfo(33,34),RI(){}
+JRISCdevInstrInfo::JRISCdevInstrInfo():JRISCdevGenInstrInfo(),RI(){}
 
 void JRISCdevInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MI, const DebugLoc &DL,
@@ -27,6 +27,7 @@ void JRISCdevInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                            bool KillSrc) const{
                             BuildMI(MBB,MI,MI->getDebugLoc(),get(JRISCdev::MOV),DestReg).addReg(SrcReg,getKillRegState(KillSrc));
                            }
+
 
 void JRISCdevInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MI,

@@ -14,8 +14,14 @@ add_llvm_target(JRISCdevCodeGen
     JRISCdevFrameLowering.cpp
     JRISCdevRegisterInfo.cpp
     JRISCdevISelLowering.cpp
+    JRISCdevIselDAGToDAG.cpp
+    JRISCdevInstrInfo.cpp
     JRISCdevSubtarget.cpp
     JRISCdevTargetMachine.cpp
+    JRISCdevAsmPrinter.cpp
+    JRISCdevMClower.cpp
+    JRISCdevTargetTransformInfo.cpp
+    JRISCdevAsmOutput.cpp
     
     LINK_COMPONENTS
     Analysis

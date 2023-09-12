@@ -3,13 +3,18 @@
 
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "MCTargetDesc/JRISCdevAsmStreamer.h"
 #include "JRISCdevSubtarget.h"
 namespace llvm{
+
 
 
 class JRISCdevTargetMachine : public LLVMTargetMachine{
     private:
         JRISCdevSubtarget subtarget;
+        std::unique_ptr<TargetLoweringObjectFile> TLOF;
     public:
         JRISCdevTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
@@ -18,9 +23,27 @@ class JRISCdevTargetMachine : public LLVMTargetMachine{
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOpt::Level OL, bool JIT);
           const JRISCdevSubtarget *getSubtargetImpl(const Function &F) const override {
-    return &subtarget;
+            const JRISCdevSubtarget *sbinfo = &subtarget;
+            assert(sbinfo && "NO subtarget?");
+    return sbinfo;
   }
+        TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
+    TargetLoweringObjectFile *getObjFileLowering() const override {
+    return TLOF.get();
+  }
+  TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
+  bool addPassesToEmitFile(
+    PassManagerBase &PM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+    CodeGenFileType FileType, bool DisableVerify,
+    MachineModuleInfoWrapperPass *MMIWP) override;
+  bool addCodeFileOut(PassManagerBase &PM,
+                                      raw_pwrite_stream &Out,
+                                      raw_pwrite_stream *DwoOut,
+                                      CodeGenFileType FileType,
+                                      MCContext &Context);
 };
+
+FunctionPass *createJRISCdevISelDag(JRISCdevTargetMachine &TM,CodeGenOpt::Level lev);
 }
 
 #endif

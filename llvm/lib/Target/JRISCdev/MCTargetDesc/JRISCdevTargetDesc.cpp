@@ -1,10 +1,12 @@
 #include "TargetInfo/JRISCdevTargetInfo.h"
+
 #include "MCTargetDesc/JRISCdevTargetDesc.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/FormattedStream.h"
 using namespace llvm;
 
 
@@ -51,7 +53,15 @@ static MCInstPrinter *createJRISCdevInstPrinter(const Triple &T,
                                                 const MCRegisterInfo &MRI) {
     MCInstPrinter *X = new JRISCdevInstPrinter(MAI,MII,MRI);
     return X;
-                                                }
+                                          }
+
+/*
+static MCTargetStreamer *createJRISCdevASMTargetStreamer(MCStreamer &S,formatted_raw_ostream &OS,MCInstPrinter *InstPrint,bool isVerbose){
+  JRISCdevAsmStreamer NS(S.getContext(),OS,InstPrint);
+  S = NS;
+  return nullptr;
+}
+*/
 
 MCCodeEmitter *createJRISCdevMCCodeEmitter(const MCInstrInfo &MCII,
                                          MCContext &Ctx) {
@@ -65,6 +75,12 @@ MCAsmBackend *createJRISCdevMCAsmBackend(const Target &T,
 return nullptr;
 }
 
+/*
+static MCTargetStreamer *createJRISCdevAsmStreamer(MCStreamer &S,formatted_raw_ostream &OS,MCInstPrinter *InstPrint,bool IsVerboseAsm){
+  return new JRISCdevAsmStreamer(S);
+}
+*/
+
 MCTargetStreamer *
 createJRISCdevObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
     return nullptr;
@@ -72,7 +88,6 @@ createJRISCdevObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeJRISCdevTargetMC() {
   Target &T = getJRISCdev();
-
   TargetRegistry::RegisterMCAsmInfo(T, createJRISCdevMCAsmInfo);
   TargetRegistry::RegisterMCInstrInfo(T, createJRISCdevMCInstrInfo);
   TargetRegistry::RegisterMCRegInfo(T, createJRISCdevMCRegisterInfo);
@@ -80,5 +95,5 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeJRISCdevTargetMC() {
   TargetRegistry::RegisterMCInstPrinter(T, createJRISCdevInstPrinter);
   //TargetRegistry::RegisterMCCodeEmitter(T, createJRISCdevMCCodeEmitter);
   //TargetRegistry::RegisterMCAsmBackend(T, createJRISCdevMCAsmBackend);
-  //TargetRegistry::RegisterObjectTargetStreamer(T, createJRISCdevObjectTargetStreamer);
+  //lsTargetRegistry::RegisterObjectTargetStreamer(T, createJRISCdevObjectTargetStreamer);
 }
