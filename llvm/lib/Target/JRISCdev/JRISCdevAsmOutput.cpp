@@ -203,16 +203,16 @@ void JRISCdevAsmOutput::emitInt(const Constant *C,unsigned size){
 
 void JRISCdevAsmOutput::emitType(const Type *Ty){
     if(Ty->isPointerTy()){
-        OS << " W ";
+        OS << " WORD ";
     }
     else if(Ty->getIntegerBitWidth() <= 8){
-        OS << " B ";
+        OS << " BYTE ";
     }
     else if (Ty->getIntegerBitWidth() <= 16){
-        OS << " H ";
+        OS << " HALF ";
     }
     else if (Ty->getIntegerBitWidth() <= 32){
-        OS << " W ";
+        OS << " WORD ";
     }
     else{
         OS << " ERROR ";

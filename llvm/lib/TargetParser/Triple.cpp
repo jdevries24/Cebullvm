@@ -176,7 +176,6 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case dxil:        return "dx";
 
   case xtensa:      return "xtensa";
-  case JRISCdev: return "JRISCdev";
   }
 }
 
@@ -248,7 +247,6 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case ZOS: return "zos";
   case ShaderModel: return "shadermodel";
   case LiteOS: return "liteos";
-  case JDOS:return "JDOS";
   }
 
   llvm_unreachable("Invalid OSType");
@@ -400,6 +398,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("loongarch64", loongarch64)
     .Case("dxil", dxil)
     .Case("xtensa", xtensa)
+    .Case("JRISCdev",JRISCdev)
     .Default(UnknownArch);
 }
 
@@ -542,6 +541,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
     .Case("loongarch64", Triple::loongarch64)
     .Case("dxil", Triple::dxil)
     .Case("xtensa", Triple::xtensa)
+    .Case("JRISCdev",Triple::JRISCdev)
     .Default(Triple::UnknownArch);
 
   // Some architectures require special parsing logic just to compute the

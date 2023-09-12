@@ -41,6 +41,7 @@
 #include "Targets/WebAssembly.h"
 #include "Targets/X86.h"
 #include "Targets/XCore.h"
+#include "Targets/JRISCdev.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "llvm/ADT/StringExtras.h"
@@ -111,11 +112,14 @@ void addCygMingDefines(const LangOptions &Opts, MacroBuilder &Builder) {
 
 std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
                                            const TargetOptions &Opts) {
+  return std::make_unique<JRISCTargetInfo>(Triple,Opts);
   llvm::Triple::OSType os = Triple.getOS();
-
   switch (Triple.getArch()) {
   default:
     return nullptr;
+
+  case llvm::Triple::JRISCdev:
+    return std::make_unique<JRISCTargetInfo>(Triple,Opts);
 
   case llvm::Triple::arc:
     return std::make_unique<ARCTargetInfo>(Triple, Opts);

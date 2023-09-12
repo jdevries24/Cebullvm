@@ -367,7 +367,7 @@ public:
     return {};
   }
 
-  bool enableSelectOptimize() const { return true; }
+  bool enableSelectOptimize() const { return false; }
 
   bool enableInterleavedAccessVectorization() const { return false; }
 

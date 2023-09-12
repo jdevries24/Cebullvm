@@ -49,6 +49,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
@@ -573,7 +574,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
           TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM, CM, OLvl));
       assert(Target && "Could not allocate target machine!");
-
+      Target->createDataLayout().getStringRepresentation();
       return Target->createDataLayout().getStringRepresentation();
     };
     if (InputLanguage == "mir" ||
@@ -617,7 +618,6 @@ static int compileModule(char **argv, LLVMContext &Context) {
           << "invalid relocation model, AIX only supports PIC.\n";
       return 1;
     }
-
     InitializeOptions(TheTriple);
     Target = std::unique_ptr<TargetMachine>(TheTarget->createTargetMachine(
         TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM, CM, OLvl));
