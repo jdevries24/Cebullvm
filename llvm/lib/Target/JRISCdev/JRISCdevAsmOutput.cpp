@@ -43,8 +43,6 @@
 #include "llvm/Config/config.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Comdat.h"
-#include "llvm/IR/Constant.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -148,7 +146,9 @@ bool JRISCdevAsmOutput::runOnMachineFunction(MachineFunction &MF){
 bool JRISCdevAsmOutput::doFinalization(Module &M){
     OS << "$Data\n";
     for(auto &GV : M.globals()){
-        emitGlobalVar(&GV);
+        if(GV.hasInitializer()){
+            emitGlobalVar(&GV);
+        }
     }
     return false;
 }
@@ -157,68 +157,109 @@ void JRISCdevAsmOutput::emitGlobalVar(GlobalVariable *GV){
     if(!GV->hasPrivateLinkage()){
         OS << "@";
     }
-    OS << GV->getName();
-    const Type *GVT = GV->getValueType();
-    GVT->dump();
-    if(GVT->isIntegerTy()){
-        emitType(GVT);
-        emitInt(GV->getInitializer(),GVT->getIntegerBitWidth());
-    }
-    if(GVT->isArrayTy()){
-        emitArr(GV);
-    }
-    if(GVT->isPointerTy()){
-        OS << " W ";
-        emitPtr(GV->getInitializer());
-    }
-    OS << "\n";
+    OS << GV->getName() << " ";
+    emitGlobalConstant(GV->getParent()->getDataLayout(),GV->getInitializer(),nullptr);
+    OS << '\n';
 }
 
-void JRISCdevAsmOutput::emitPtr(const Constant *C){
-    C->dump();
-    if(C->isNullValue()){
-        OS << "0";
+void JRISCdevAsmOutput::PrintInt(int64_t value){
+    APSInt s(32);
+    if(value < 0){
+        OS << "-";
+        value *= -1;
     }
-
+    s = value;
+    OS << toString(s,10);
 }
 
-void JRISCdevAsmOutput::emitArr(GlobalVariable *GV){
-    const ArrayType *GVT = cast<ArrayType>(GV->getValueType());
-    if(GVT->getElementType()->isIntegerTy()){
-        emitType(GVT->getElementType());
-        for(unsigned i = 0;i < GVT->getArrayNumElements();i += 1){
-            emitInt(GV->getInitializer()->getAggregateElement(i));
-            if(i != GVT->getArrayNumElements() - 1){
+void JRISCdevAsmOutput::PrintSize(uint64_t size){
+    switch(size){
+        case 1:
+            OS << "BYTE";
+            break;
+        case 2:
+            OS << "HALF";
+            break;
+        case 4:
+            OS << "WORD";
+            break;
+        default:
+            OS << "UKNOWN SIZE ";
+            PrintInt((int64_t) size);
+    }
+}
+
+void JRISCdevAsmOutput::emitGlobalAgg(const DataLayout &DL,const ConstantAggregate *CS,const Constant *BaseCV){
+    unsigned numops = CS->getNumOperands();
+    for(unsigned i = 0;i < numops;i+=1){
+        const Constant *OP = CS->getOperand(i);
+        if((OP->getType()->isIntOrPtrTy())||(OP->isZeroValue())) {
+            OS << "_";
+        }
+        emitGlobalConstant(DL,OP,CS);
+        if(i != (numops - 1)){
+            OS << "\n";
+        }
+    }
+}
+
+void JRISCdevAsmOutput::emitGlobalSeq(const DataLayout &DL,const ConstantDataSequential *CV,const Constant *BaseCV){
+    if(CV->isString()){
+        OS << "BYTES \"" << CV->getAsString() << "\"";
+        for(unsigned i = 0;i < CV->getNumElements();i += 1){
+            if(CV->getElementAsInteger(i) == 0){
+                OS << ",0";
+            }
+        }
+    }
+    else if(CV->getElementType()->isIntegerTy()){
+        PrintSize(CV->getElementByteSize());
+        OS << " ";
+        unsigned numelms = CV->getNumElements();
+        for(unsigned i = 0;i < numelms;i += 1){
+            PrintInt(CV->getElementAsInteger(i));
+            if(i != numelms - 1){
+                OS << ",";
+            }
+        } 
+    }
+    else if(CV->getElementType()->isPointerTy()){
+        PrintSize(4);
+        unsigned numelms = CV->getNumElements();
+        for(unsigned i = 0;i < numelms;i += 1){
+            OS << "PTR";
+            if(i != numelms - 1){
                 OS << ",";
             }
         }
     }
 }
 
-void JRISCdevAsmOutput::emitInt(const Constant *C,unsigned size){
-    APSInt num(size);
-    num = C->getUniqueInteger().getSExtValue();
-    OS << toString(num,10);
+void JRISCdevAsmOutput::emitGlobalInt(const DataLayout &DL,const ConstantInt *CV,const Constant *BaseCV){
+    PrintSize(DL.getTypeAllocSize(CV->getType()));
+    OS << " ";
+    PrintInt(CV->getSExtValue());
 }
 
-void JRISCdevAsmOutput::emitType(const Type *Ty){
-    if(Ty->isPointerTy()){
-        OS << " WORD ";
+void JRISCdevAsmOutput::emitGlobalConstant(const DataLayout &DL,const Constant *CV,const Constant *BaseCV){
+    uint64_t size = DL.getTypeAllocSize(CV->getType());
+    if(isa<ConstantAggregateZero>(CV)){
+        OS << "ZERO ";
+        PrintInt((int64_t) size);
     }
-    else if(Ty->getIntegerBitWidth() <= 8){
-        OS << " BYTE ";
+    else if(const ConstantInt *CVI = dyn_cast<ConstantInt>(CV)){
+        emitGlobalInt(DL,CVI,BaseCV);
     }
-    else if (Ty->getIntegerBitWidth() <= 16){
-        OS << " HALF ";
+    else if(const ConstantDataSequential *CDS = dyn_cast<ConstantDataSequential>(CV)){
+        emitGlobalSeq(DL,CDS,BaseCV);
     }
-    else if (Ty->getIntegerBitWidth() <= 32){
-        OS << " WORD ";
-    }
-    else{
-        OS << " ERROR ";
+    else if(const ConstantAggregate *CS = dyn_cast<ConstantAggregate>(CV)){
+        if(BaseCV == nullptr){
+            OS << "\n";
+        }
+        emitGlobalAgg(DL,CS,BaseCV);
     }
 }
-
 
 MCOperand JRISCdevAsmOutput::lowerOperand(const MachineOperand &MO) const {
     auto MOT = MO.getType();
