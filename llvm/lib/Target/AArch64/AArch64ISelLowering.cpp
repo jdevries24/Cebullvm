@@ -18586,7 +18586,8 @@ static SDValue tryCombineLongOpWithDup(unsigned IID, SDNode *N,
     LHS = tryExtendDUPToExtractHigh(LHS, DAG);
     if (!LHS.getNode())
       return SDValue();
-  }
+  } else
+    return SDValue();
 
   if (IID == Intrinsic::not_intrinsic)
     return DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0), LHS, RHS);
@@ -18614,6 +18615,10 @@ static SDValue tryCombineShiftImm(unsigned IID, SDNode *N, SelectionDAG &DAG) {
     ShiftAmount = CVN->getSExtValue();
   } else
     return SDValue();
+
+  // If the shift amount is zero, remove the shift intrinsic.
+  if (ShiftAmount == 0 && IID != Intrinsic::aarch64_neon_sqshlu)
+    return N->getOperand(1);
 
   unsigned Opcode;
   bool IsRightShift;
