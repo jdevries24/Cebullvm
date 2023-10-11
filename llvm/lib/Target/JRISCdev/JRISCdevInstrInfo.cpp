@@ -34,10 +34,10 @@ void JRISCdevInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                    Register SrcReg, bool isKill, int FrameIndex,
                                    const TargetRegisterClass *RC,
                                    const TargetRegisterInfo *TRI,
-                                   Register VReg) const{
-                                    BuildMI(MBB,MI,MI->getDebugLoc(),get(JRISCdev::STWI))
-                                    .addReg(SrcReg,getKillRegState(isKill))
-                                    .addFrameIndex(FrameIndex).addImm(0);
+                                   Register VReg) const{ 
+                                        BuildMI(MBB,MI,MI->getDebugLoc(),get(JRISCdev::STWI))
+                                        .addReg(SrcReg,getKillRegState(isKill))
+                                        .addFrameIndex(FrameIndex).addImm(0);
                                    }
 
 void JRISCdevInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
@@ -48,4 +48,6 @@ void JRISCdevInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                     Register VReg) const{
                                         BuildMI(MBB,MI,MI->getDebugLoc(),get(JRISCdev::LDWI),DestReg)
                                         .addFrameIndex(FrameIndex).addImm(0);
+                                    
+
                                     }

@@ -36,12 +36,13 @@ JRISCdevILowering::JRISCdevILowering(const TargetMachine &TM,const JRISCdevSubta
         addRegisterClass(MVT::i32,&JRISCdev::GPregsRegClass);
         computeRegisterProperties(STI.getRegisterInfo());
         setJumpIsExpensive(false);
-        setOperationAction(ISD::SELECT_CC,MVT::i32,Expand);
+        setOperationAction(ISD::SELECT_CC,MVT::i32,Custom);
         setOperationAction(ISD::ROTL,MVT::i32,Custom);
         setOperationAction(ISD::ROTR,MVT::i32,Custom);
         setOperationAction(ISD::BR_CC,MVT::i32,Custom);
         setOperationAction(ISD::Constant,MVT::i32,Custom);
         setOperationAction(ISD::GlobalAddress,MVT::i32,Custom);
+        setOperationAction(ISD::SETCC,MVT::i32,Expand);
         setOperationAction(ISD::SIGN_EXTEND_INREG,MVT::i8,Custom);
         setOperationAction(ISD::SIGN_EXTEND_INREG,MVT::i16,Custom);
     }
@@ -106,36 +107,16 @@ SDValue JRISCdevILowering::getCMP(SDValue Op,SelectionDAG &DAG,SDLoc dl,ISD::Con
 SDValue JRISCdevILowering::LowerCMP(SDValue Op,SelectionDAG &DAG,SDLoc dl) const{
   CondCodeSDNode *cc = cast<CondCodeSDNode>(Op.getOperand(1).getNode());
   return getCMP(Op,DAG,dl,getCondCode(cc->get()),needsSwap(cc->get()));
-  /*
-  switch(cc->get()){
-    case ISD::SETGE:
-      Op = swapCMP(Op,DAG,dl,ISD::SETLT);
-      break;
-    case ISD::SETOGE:
-      Op = swapCMP(Op,DAG,dl,ISD::SETOLT);
-      break;
-    case ISD::SETUGE:
-      Op = swapCMP(Op,DAG,dl,ISD::SETULT);
-      break;
-    case ISD::SETULE:
-      Op = swapCMP(Op,DAG,dl,ISD::SETUGT);
-      break;
-    case ISD::SETEQ:
-    case ISD::SETLT:
-    case ISD::SETNE:
-    case ISD::SETGT:
-    case ISD::SETUNE:
-    case ISD::SETULT:
-    case ISD::SETUGT:
-    case ISD::SETUEQ:
-      return Op;
-    default:
-      dbgs() << "Unknown cond code\n";
-      cc->dump();
-      llvm_unreachable("Unknown cond code");
+}
+
+SDValue JRISCdevILowering::getSET_CC(SDValue Op,SelectionDAG &DAG,SDLoc dl) const{
+  CondCodeSDNode *cc = cast<CondCodeSDNode>(Op.getOperand(4).getNode());
+  if(needsSwap(cc->get())){
+    return DAG.getSelectCC(dl,Op.getOperand(1),Op.getOperand(0),Op.getOperand(2),Op.getOperand(3),getCondCode(cc->get()));
   }
-  return Op;
-  */
+  else{
+    return Op;
+  }
 }
 
 SDValue JRISCdevILowering::LowerOperation(SDValue Op,SelectionDAG &DAG) const {
@@ -158,6 +139,8 @@ SDValue JRISCdevILowering::LowerOperation(SDValue Op,SelectionDAG &DAG) const {
     case ISD::SIGN_EXTEND_INREG:
     case ISD::SIGN_EXTEND:
       return Op.getOperand(0);
+    case ISD::SELECT_CC:
+      return getSET_CC(Op,DAG,dl);
   }
 }
 

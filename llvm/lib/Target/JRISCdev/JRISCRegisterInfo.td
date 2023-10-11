@@ -20,7 +20,8 @@ def RA:GPRegister<15,"RA">{
     let AltNames = ["R15"];
 }
 
-def GPregs : RegisterClass<"JRISCdev",[i8,i16,i32],32,(add (sequence "R%i",0,13),SP,RA)>;
+def GPregs : RegisterClass<"JRISCdev",[i8,i16,i32],32,(add (sequence "R%i",1,13))>;
+def SystemRegs :RegisterClass<"JRISCdev",[i32],32,(add SP,RA)>;
 
 def GPReg : RegisterOperand<GPregs>{
     let GIZeroRegister = R0;
