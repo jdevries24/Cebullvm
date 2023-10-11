@@ -16,6 +16,7 @@
 
 namespace llvm {
 
+class AMDGPUTargetMachine;
 class TargetMachine;
 
 // GlobalISel passes
@@ -41,25 +42,32 @@ FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
 FunctionPass *createSIOptimizeVGPRLiveRangePass();
 FunctionPass *createSIFixSGPRCopiesPass();
+FunctionPass *createLowerWWMCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
 FunctionPass *createSIInsertWaitcntsPass();
 FunctionPass *createSIPreAllocateWWMRegsPass();
 FunctionPass *createSIFormMemoryClausesPass();
 
 FunctionPass *createSIPostRABundlerPass();
-FunctionPass *createAMDGPUSimplifyLibCallsPass(const TargetMachine *);
-FunctionPass *createAMDGPUUseNativeCallsPass();
+FunctionPass *createAMDGPUImageIntrinsicOptimizerPass(const TargetMachine *);
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPULateCodeGenPreparePass();
 FunctionPass *createAMDGPUMachineCFGStructurizerPass();
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
-ModulePass *createAMDGPULowerModuleLDSPass();
+ModulePass *
+createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
 FunctionPass *createSIModeRegisterPass();
 FunctionPass *createGCNPreRAOptimizationsPass();
 
 struct AMDGPUSimplifyLibCallsPass : PassInfoMixin<AMDGPUSimplifyLibCallsPass> {
-  AMDGPUSimplifyLibCallsPass(TargetMachine &TM) : TM(TM) {}
+  AMDGPUSimplifyLibCallsPass() {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
+struct AMDGPUImageIntrinsicOptimizerPass
+    : PassInfoMixin<AMDGPUImageIntrinsicOptimizerPass> {
+  AMDGPUImageIntrinsicOptimizerPass(TargetMachine &TM) : TM(TM) {}
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
 private:
@@ -116,10 +124,13 @@ struct AMDGPULowerKernelAttributesPass
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-void initializeAMDGPULowerModuleLDSPass(PassRegistry &);
-extern char &AMDGPULowerModuleLDSID;
+void initializeAMDGPULowerModuleLDSLegacyPass(PassRegistry &);
+extern char &AMDGPULowerModuleLDSLegacyPassID;
 
 struct AMDGPULowerModuleLDSPass : PassInfoMixin<AMDGPULowerModuleLDSPass> {
+  const AMDGPUTargetMachine &TM;
+  AMDGPULowerModuleLDSPass(const AMDGPUTargetMachine &TM_) : TM(TM_) {}
+
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
@@ -143,6 +154,9 @@ extern char &SIFixSGPRCopiesID;
 
 void initializeSIFixVGPRCopiesPass(PassRegistry &);
 extern char &SIFixVGPRCopiesID;
+
+void initializeSILowerWWMCopiesPass(PassRegistry &);
+extern char &SILowerWWMCopiesID;
 
 void initializeSILowerI1CopiesPass(PassRegistry &);
 extern char &SILowerI1CopiesID;
@@ -171,11 +185,8 @@ extern char &SIOptimizeExecMaskingID;
 void initializeSIPreAllocateWWMRegsPass(PassRegistry &);
 extern char &SIPreAllocateWWMRegsID;
 
-void initializeAMDGPUSimplifyLibCallsPass(PassRegistry &);
-extern char &AMDGPUSimplifyLibCallsID;
-
-void initializeAMDGPUUseNativeCallsPass(PassRegistry &);
-extern char &AMDGPUUseNativeCallsID;
+void initializeAMDGPUImageIntrinsicOptimizerPass(PassRegistry &);
+extern char &AMDGPUImageIntrinsicOptimizerID;
 
 void initializeAMDGPUPerfHintAnalysisPass(PassRegistry &);
 extern char &AMDGPUPerfHintAnalysisID;
@@ -217,8 +228,7 @@ private:
 };
 
 Pass *createAMDGPUStructurizeCFGPass();
-FunctionPass *createAMDGPUISelDag(TargetMachine &TM,
-                                  CodeGenOpt::Level OptLevel);
+FunctionPass *createAMDGPUISelDag(TargetMachine &TM, CodeGenOptLevel OptLevel);
 ModulePass *createAMDGPUAlwaysInlinePass(bool GlobalOpt = true);
 
 struct AMDGPUAlwaysInlinePass : PassInfoMixin<AMDGPUAlwaysInlinePass> {
@@ -236,6 +246,16 @@ private:
 
 public:
   AMDGPUCodeGenPreparePass(TargetMachine &TM) : TM(TM){};
+  PreservedAnalyses run(Function &, FunctionAnalysisManager &);
+};
+
+class AMDGPULowerKernelArgumentsPass
+    : public PassInfoMixin<AMDGPULowerKernelArgumentsPass> {
+private:
+  TargetMachine &TM;
+
+public:
+  AMDGPULowerKernelArgumentsPass(TargetMachine &TM) : TM(TM){};
   PreservedAnalyses run(Function &, FunctionAnalysisManager &);
 };
 
@@ -279,9 +299,16 @@ extern char &AMDGPURemoveIncompatibleFunctionsID;
 void initializeAMDGPULateCodeGenPreparePass(PassRegistry &);
 extern char &AMDGPULateCodeGenPrepareID;
 
-FunctionPass *createAMDGPURewriteUndefForPHIPass();
-void initializeAMDGPURewriteUndefForPHIPass(PassRegistry &);
-extern char &AMDGPURewriteUndefForPHIPassID;
+FunctionPass *createAMDGPURewriteUndefForPHILegacyPass();
+void initializeAMDGPURewriteUndefForPHILegacyPass(PassRegistry &);
+extern char &AMDGPURewriteUndefForPHILegacyPassID;
+
+class AMDGPURewriteUndefForPHIPass
+    : public PassInfoMixin<AMDGPURewriteUndefForPHIPass> {
+public:
+  AMDGPURewriteUndefForPHIPass() = default;
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
 
 void initializeSIAnnotateControlFlowPass(PassRegistry&);
 extern char &SIAnnotateControlFlowPassID;
@@ -326,6 +353,9 @@ extern char &AMDGPUOpenCLEnqueuedBlockLoweringID;
 
 void initializeGCNNSAReassignPass(PassRegistry &);
 extern char &GCNNSAReassignID;
+
+void initializeGCNPreRALongBranchRegPass(PassRegistry &);
+extern char &GCNPreRALongBranchRegID;
 
 void initializeGCNPreRAOptimizationsPass(PassRegistry &);
 extern char &GCNPreRAOptimizationsID;

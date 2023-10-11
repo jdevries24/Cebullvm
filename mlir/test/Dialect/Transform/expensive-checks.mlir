@@ -19,7 +19,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !transform.any_op):
     // expected-note @below {{handle to invalidated ops}}
     %0 = pdl_match @return in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
+    %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
     // expected-note @below {{invalidated by this transform op that consumes its operand #0}}
     test_consume_operand %1 : !transform.any_op
     // expected-error @below {{op uses a handle invalidated by a previously executed transform op}}
@@ -408,5 +408,24 @@ transform.sequence failures(propagate) {
     // expected-note @below {{invalidated by this transform op}}
     transform.test_consume_operand %0 : !transform.any_op
     transform.yield
+  }
+}
+
+// -----
+
+module @named_inclusion_and_consumption attributes { transform.with_named_sequence } {
+
+  transform.named_sequence @foo(%arg0: !transform.any_op {transform.consumed}) -> () {
+    // Consuming this handle removes the mapping from the current stack frame
+    // mapping and from the caller's stack frame mapping. (If this were not
+    // be the case, the "expensive checks" caching mechanism for op names
+    // would throw an error saying that an op is mapped but not in the cache.)
+    transform.test_consume_operand %arg0 : !transform.any_op
+    transform.yield
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb0(%arg0: !transform.any_op):
+    include @foo failures(propagate) (%arg0) : (!transform.any_op) -> ()
   }
 }

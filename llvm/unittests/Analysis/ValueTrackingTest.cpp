@@ -1848,13 +1848,13 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_NInf) {
       fcmpToClassTest(CmpInst::FCMP_OGT, *A3->getFunction(), A3->getOperand(0),
                       A3->getOperand(1));
   EXPECT_EQ(nullptr, OgtVal);
-  EXPECT_EQ(fcNone, OgtClass);
+  EXPECT_EQ(fcAllFlags, OgtClass);
 
   auto [UleVal, UleClass] =
       fcmpToClassTest(CmpInst::FCMP_ULE, *A4->getFunction(), A4->getOperand(0),
                       A4->getOperand(1));
   EXPECT_EQ(nullptr, UleVal);
-  EXPECT_EQ(fcNone, UleClass);
+  EXPECT_EQ(fcAllFlags, UleClass);
 }
 
 TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_PInf) {
@@ -1881,13 +1881,13 @@ TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_PInf) {
       fcmpToClassTest(CmpInst::FCMP_OLE, *A3->getFunction(), A3->getOperand(0),
                       A3->getOperand(1));
   EXPECT_EQ(nullptr, OleVal);
-  EXPECT_EQ(fcNone, OleClass);
+  EXPECT_EQ(fcAllFlags, OleClass);
 
   auto [UgtVal, UgtClass] =
       fcmpToClassTest(CmpInst::FCMP_UGT, *A4->getFunction(), A4->getOperand(0),
                       A4->getOperand(1));
   EXPECT_EQ(nullptr, UgtVal);
-  EXPECT_EQ(fcNone, UgtClass);
+  EXPECT_EQ(fcAllFlags, UgtClass);
 }
 
 TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
@@ -2254,7 +2254,7 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownUSubSatZerosPreserved) {
 }
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntTrunc) {
-  // ptrtoint truncates the pointer type.
+  // ptrtoint truncates the pointer type. Make sure we don't crash.
   parseAssembly(
       "define void @test(ptr %p) {\n"
       "  %A = load ptr, ptr %p\n"
@@ -2268,12 +2268,11 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntTrunc) {
   AssumptionCache AC(*F);
   KnownBits Known = computeKnownBits(
       A, M->getDataLayout(), /* Depth */ 0, &AC, F->front().getTerminator());
-  EXPECT_EQ(Known.Zero.getZExtValue(), 31u);
-  EXPECT_EQ(Known.One.getZExtValue(), 0u);
+  EXPECT_TRUE(Known.isUnknown());
 }
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntZext) {
-  // ptrtoint zero extends the pointer type.
+  // ptrtoint zero extends the pointer type. Make sure we don't crash.
   parseAssembly(
       "define void @test(ptr %p) {\n"
       "  %A = load ptr, ptr %p\n"
@@ -2287,8 +2286,7 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntZext) {
   AssumptionCache AC(*F);
   KnownBits Known = computeKnownBits(
       A, M->getDataLayout(), /* Depth */ 0, &AC, F->front().getTerminator());
-  EXPECT_EQ(Known.Zero.getZExtValue(), 31u);
-  EXPECT_EQ(Known.One.getZExtValue(), 0u);
+  EXPECT_TRUE(Known.isUnknown());
 }
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsFreeze) {

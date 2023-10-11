@@ -328,7 +328,7 @@ public:
   /// If Signed is a function that takes an n-bit tuple and maps to the
   /// integer domain as the tuples value interpreted as twos complement,
   /// and Unsigned a function that takes an n-bit tuple and maps to the
-  /// integer domain as as the base two value of input tuple, then a + b
+  /// integer domain as the base two value of input tuple, then a + b
   /// has IncrementNUSW iff:
   ///
   /// 0 <= Unsigned(a) + Signed(b) < 2^n
@@ -525,7 +525,7 @@ public:
   ///     loop { v2 = load @global2; }
   /// }
   /// No SCEV with operand V1, and v2 can exist in this program.
-  bool instructionCouldExistWitthOperands(const SCEV *A, const SCEV *B);
+  bool instructionCouldExistWithOperands(const SCEV *A, const SCEV *B);
 
   /// Return true if the SCEV is a scAddRecExpr or it contains
   /// scAddRecExpr. The result will be cached in HasRecMap.
@@ -831,13 +831,6 @@ public:
   /// Returns 0 if the trip count is unknown or not constant.
   unsigned getSmallConstantMaxTripCount(const Loop *L);
 
-  /// Returns the upper bound of the loop trip count infered from array size.
-  /// Can not access bytes starting outside the statically allocated size
-  /// without being immediate UB.
-  /// Returns SCEVCouldNotCompute if the trip count could not inferred
-  /// from array accesses.
-  const SCEV *getConstantMaxTripCountFromArray(const Loop *L);
-
   /// Returns the largest constant divisor of the trip count as a normal
   /// unsigned value, if possible. This means that the actual trip count is
   /// always a multiple of the returned value. Returns 1 if the trip count is
@@ -862,7 +855,7 @@ public:
                                         const BasicBlock *ExitingBlock);
 
   /// The terms "backedge taken count" and "exit count" are used
-  /// interchangeably to refer to the number of times the backedge of a loop 
+  /// interchangeably to refer to the number of times the backedge of a loop
   /// has executed before the loop is exited.
   enum ExitCountKind {
     /// An expression exactly describing the number of times the backedge has
@@ -875,7 +868,7 @@ public:
   };
 
   /// Return the number of times the backedge executes before the given exit
-  /// would be taken; if not exactly computable, return SCEVCouldNotCompute. 
+  /// would be taken; if not exactly computable, return SCEVCouldNotCompute.
   /// For a single exit loop, this value is equivelent to the result of
   /// getBackedgeTakenCount.  The loop is guaranteed to exit (via *some* exit)
   /// before the backedge is executed (ExitCount + 1) times.  Note that there
@@ -1310,6 +1303,12 @@ public:
   /// Return true if this loop is finite by assumption.  That is,
   /// to be infinite, it must also be undefined.
   bool loopIsFiniteByAssumption(const Loop *L);
+
+  /// Return the set of Values that, if poison, will definitively result in S
+  /// being poison as well. The returned set may be incomplete, i.e. there can
+  /// be additional Values that also result in S being poison.
+  void getPoisonGeneratingValues(SmallPtrSetImpl<const Value *> &Result,
+                                 const SCEV *S);
 
   class FoldID {
     const SCEV *Op = nullptr;

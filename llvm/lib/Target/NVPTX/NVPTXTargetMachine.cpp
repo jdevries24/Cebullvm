@@ -67,7 +67,7 @@ namespace llvm {
 
 void initializeGenericToNVVMLegacyPassPass(PassRegistry &);
 void initializeNVPTXAllocaHoistingPass(PassRegistry &);
-void initializeNVPTXAssignValidGlobalNamesPass(PassRegistry&);
+void initializeNVPTXAssignValidGlobalNamesPass(PassRegistry &);
 void initializeNVPTXAtomicLowerPass(PassRegistry &);
 void initializeNVPTXCtorDtorLoweringLegacyPass(PassRegistry &);
 void initializeNVPTXLowerAggrCopiesPass(PassRegistry &);
@@ -126,7 +126,7 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                                        const TargetOptions &Options,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
-                                       CodeGenOpt::Level OL, bool is64bit)
+                                       CodeGenOptLevel OL, bool is64bit)
     // The pic relocation model is used regardless of what the client has
     // specified, as it is the only relocation model currently supported.
     : LLVMTargetMachine(T, computeDataLayout(is64bit, UseShortPointersOpt), TT,
@@ -154,7 +154,7 @@ NVPTXTargetMachine32::NVPTXTargetMachine32(const Target &T, const Triple &TT,
                                            const TargetOptions &Options,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
-                                           CodeGenOpt::Level OL, bool JIT)
+                                           CodeGenOptLevel OL, bool JIT)
     : NVPTXTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, false) {}
 
 void NVPTXTargetMachine64::anchor() {}
@@ -164,7 +164,7 @@ NVPTXTargetMachine64::NVPTXTargetMachine64(const Target &T, const Triple &TT,
                                            const TargetOptions &Options,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
-                                           CodeGenOpt::Level OL, bool JIT)
+                                           CodeGenOptLevel OL, bool JIT)
     : NVPTXTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, true) {}
 
 namespace {
@@ -303,7 +303,7 @@ NVPTXTargetMachine::getPredicatedAddrSpace(const Value *V) const {
 }
 
 void NVPTXPassConfig::addEarlyCSEOrGVNPass() {
-  if (getOptLevel() == CodeGenOpt::Aggressive)
+  if (getOptLevel() == CodeGenOptLevel::Aggressive)
     addPass(createGVNPass());
   else
     addPass(createEarlyCSEPass());
@@ -366,7 +366,7 @@ void NVPTXPassConfig::addIRPasses() {
   const NVPTXSubtarget &ST = *getTM<NVPTXTargetMachine>().getSubtargetImpl();
   addPass(createNVVMReflectPass(ST.getSmVersion()));
 
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createNVPTXImageOptimizerPass());
   addPass(createNVPTXAssignValidGlobalNamesPass());
   addPass(createGenericToNVVMLegacyPass());
@@ -374,7 +374,7 @@ void NVPTXPassConfig::addIRPasses() {
   // NVPTXLowerArgs is required for correctness and should be run right
   // before the address space inference passes.
   addPass(createNVPTXLowerArgsPass());
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     addAddressSpaceInferencePasses();
     addStraightLineScalarOptimizationPasses();
   }
@@ -396,14 +396,16 @@ void NVPTXPassConfig::addIRPasses() {
   //   %1 = shl %a, 2
   //
   // but EarlyCSE can do neither of them.
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     addEarlyCSEOrGVNPass();
     if (!DisableLoadStoreVectorizer)
       addPass(createLoadStoreVectorizerPass());
     addPass(createSROAPass());
   }
 
-  addPass(createNVPTXLowerUnreachablePass());
+  const auto &Options = getNVPTXTargetMachine().Options;
+  addPass(createNVPTXLowerUnreachablePass(Options.TrapUnreachable,
+                                          Options.NoTrapAfterNoreturn));
 }
 
 bool NVPTXPassConfig::addInstSelector() {
@@ -426,7 +428,7 @@ void NVPTXPassConfig::addPreRegAlloc() {
 
 void NVPTXPassConfig::addPostRegAlloc() {
   addPass(createNVPTXPrologEpilogPass());
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     // NVPTXPrologEpilogPass calculates frame object offset and replace frame
     // index with VRFrame register. NVPTXPeephole need to be run after that and
     // will replace VRFrame with VRFrameLocal when possible.
@@ -456,11 +458,10 @@ void NVPTXPassConfig::addOptimizedRegAlloc() {
   if (addPass(&MachineSchedulerID))
     printAndVerify("After Machine Scheduling");
 
-
   addPass(&StackSlotColoringID);
 
   // FIXME: Needs physical registers
-  //addPass(&MachineLICMID);
+  // addPass(&MachineLICMID);
 
   printAndVerify("After StackSlotColoring");
 }
