@@ -131,7 +131,6 @@ bool JRISCdevAsmOutput::runOnMachineFunction(MachineFunction &MF){
             OS << MBB.getSymbol()->getName() <<'\n';
         }
         for(auto &MI : MBB){
-            MI.dump();
             if(!MI.isMetaInstruction()){
                 MCInst temp;
                 lowerMI(&MI,temp);
