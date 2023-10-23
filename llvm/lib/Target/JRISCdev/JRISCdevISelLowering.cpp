@@ -45,6 +45,9 @@ JRISCdevILowering::JRISCdevILowering(const TargetMachine &TM,const JRISCdevSubta
         setOperationAction(ISD::SETCC,MVT::i32,Expand);
         setOperationAction(ISD::SIGN_EXTEND_INREG,MVT::i8,Custom);
         setOperationAction(ISD::SIGN_EXTEND_INREG,MVT::i16,Custom);
+	setOperationAction(ISD::BR_JT,MVT::Other,Expand);
+	setOperationAction(ISD::BRIND,MVT::Other,Expand);
+	setOperationAction(ISD::BRCOND,MVT::Other,Custom);
     }
 
 SDValue JRISCdevILowering::LowerConst(SDValue Op,SelectionDAG &DAG) const{
@@ -119,6 +122,10 @@ SDValue JRISCdevILowering::getSET_CC(SDValue Op,SelectionDAG &DAG,SDLoc dl) cons
   }
 }
 
+SDValue JRISCdevILowering::getBRCond(SDValue Op,SelectionDAG &DAG,SDLoc dl) const{
+	return DAG.getNode(ISD::BR_CC,dl,Op.getValueType(),Op.getOperand(0),DAG.getCondCode(ISD::CondCode::SETNE),Op.getOperand(1),DAG.getRegister(JRISCdev::R0,MVT::i32),Op.getOperand(2));
+}
+
 SDValue JRISCdevILowering::LowerOperation(SDValue Op,SelectionDAG &DAG) const {
   SDLoc dl(Op.getNode());
   switch(Op.getOpcode()){
@@ -141,6 +148,8 @@ SDValue JRISCdevILowering::LowerOperation(SDValue Op,SelectionDAG &DAG) const {
       return Op.getOperand(0);
     case ISD::SELECT_CC:
       return getSET_CC(Op,DAG,dl);
+    case ISD::BRCOND:
+      return getBRCond(Op,DAG,dl);
   }
 }
 

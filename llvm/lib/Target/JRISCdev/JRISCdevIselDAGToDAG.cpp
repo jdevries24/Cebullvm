@@ -19,7 +19,7 @@ public:
  #include "JRISCGenDAGISel.inc"
 
   explicit JRISCdevDAGToDAGISel(JRISCdevTargetMachine &TargetMachine,
-                             CodeGenOpt::Level OptLevel)
+                             CodeGenOptLevel OptLevel)
       : SelectionDAGISel(ID, TargetMachine, OptLevel) {
       }
       StringRef getPassName() const override{
@@ -107,7 +107,7 @@ void JRISCdevDAGToDAGISel::Select(SDNode *node){
   }
 }
 
-FunctionPass *createJRISCdevISelDag(JRISCdevTargetMachine &TM,CodeGenOpt::Level lev){
+FunctionPass *createJRISCdevISelDag(JRISCdevTargetMachine &TM,CodeGenOptLevel lev){
     return new JRISCdevDAGToDAGISel(TM,lev);
 }
 

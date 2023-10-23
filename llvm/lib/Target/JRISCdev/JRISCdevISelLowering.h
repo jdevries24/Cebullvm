@@ -33,6 +33,7 @@ namespace llvm{
             bool isSelectSupported(SelectSupportKind SSK) const override {return false;};
             ISD::CondCode getCondCode(ISD::CondCode CC) const;
             bool needsSwap(ISD::CondCode CC) const;
+	    SDValue getBRCond(SDValue Op,SelectionDAG &DAG,SDLoc dl) const;
             SDValue getSET_CC(SDValue Op,SelectionDAG &DAG,SDLoc dl) const;
             SDValue getCMP(SDValue Op,SelectionDAG &DAG,SDLoc dl,ISD::CondCode code,bool reversed) const;
             SDValue LowerCMP(SDValue Op,SelectionDAG &DAG, SDLoc dl) const;

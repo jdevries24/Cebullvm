@@ -21,7 +21,7 @@ class JRISCdevTargetMachine : public LLVMTargetMachine{
                                        const TargetOptions &Options,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
-                                       CodeGenOpt::Level OL, bool JIT);
+                                       CodeGenOptLevel OL, bool JIT);
           const JRISCdevSubtarget *getSubtargetImpl(const Function &F) const override {
             const JRISCdevSubtarget *sbinfo = &subtarget;
             assert(sbinfo && "NO subtarget?");
@@ -43,7 +43,7 @@ class JRISCdevTargetMachine : public LLVMTargetMachine{
                                       MCContext &Context);
 };
 
-FunctionPass *createJRISCdevISelDag(JRISCdevTargetMachine &TM,CodeGenOpt::Level lev);
+FunctionPass *createJRISCdevISelDag(JRISCdevTargetMachine &TM,CodeGenOptLevel lev);
 }
 
 #endif

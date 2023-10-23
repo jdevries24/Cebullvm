@@ -33,7 +33,7 @@ JRISCdevTargetMachine::JRISCdevTargetMachine(const Target &T, const Triple &TT,
                                        const TargetOptions &Options,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
-                                       CodeGenOpt::Level OL, bool JIT):LLVMTargetMachine(T,"E-p:32:32-i32:32-i16:16-i8:8-i1:8",TT,CPU,FS,Options,Reloc::PIC_,getCM(CM),OL),
+                                       CodeGenOptLevel OL, bool JIT):LLVMTargetMachine(T,"E-p:32:32-i32:32-i16:16-i8:8-i1:8",TT,CPU,FS,Options,Reloc::PIC_,getCM(CM),OL),
                                        subtarget(TT,CPU.str(),FS.str(),*this),TLOF(std::make_unique<TargetLoweringObjectFileELF>()){
                                         initAsmInfo();
                      }
@@ -57,7 +57,7 @@ bool JRISCdevTargetMachine::addPassesToEmitFile(
       return true;
   } else {
     // MIR printing is redundant with -filetype=null.
-    if (FileType != CGFT_Null)
+    if (FileType != CodeGenFileType::Null)
       PM.add(createPrintMIRPass(Out));
   }
  
@@ -74,7 +74,7 @@ bool JRISCdevTargetMachine::addCodeFileOut(PassManagerBase &PM,
   const MCAsmInfo &MAI = *getMCAsmInfo();
   const MCRegisterInfo &MRI = *getMCRegisterInfo();
   const MCInstrInfo &MII = *getMCInstrInfo();
-  if(CodeGenFileType::CGFT_AssemblyFile == FileType){
+  if(CodeGenFileType::AssemblyFile == FileType){
     MCInstPrinter *InstPrint = getTarget().createMCInstPrinter(getTargetTriple(),MAI.getAssemblerDialect(),MAI,MII,MRI);
     //std::unique_ptr<MCStreamer> AsmStreamer;
     auto FOut = std::make_unique<formatted_raw_ostream>(Out);
