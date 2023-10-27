@@ -158,11 +158,11 @@ def LEA:LongINS<0x74,(outs GPReg:$dest),(ins i32imm:$loc),"LEA $dest,$loc",[(set
 def CAL:LongINS<0x0A,(outs),(ins i32imm:$loc),"CAL $loc",[(JRISC_call (load_sym tglobaladdr:$loc))]>{let isCall=1;}
 def CAR:LongINS<0x0A,(outs),(ins GPReg:$loc),"CAR $loc",[(JRISC_call i32:$loc)]>{let isCall=1;}
 
-class SEL_PAT<CondCode cc>:Instruction{
+class SEL_PAT<CondCode cc,string CondStr>:Instruction{
     let Namespace = "JRISCdev";
     let OutOperandList = (outs GPReg:$res);
     let InOperandList = (ins GPReg:$cond1,GPReg:$cond2,GPReg:$true,GPReg:$false);
-    let AsmString = "UNIMPLEMENTED";
+    let AsmString = !strconcat("$res = ($cond1 ",CondStr, " $cond2) ? $true : $false");
     let Pattern = [(set i32:$res , (selectcc i32:$cond1, i32:$cond2 , i32:$true, i32:$false,cc))];
 }
 
@@ -170,12 +170,12 @@ class SEL_PAT<CondCode cc>:Instruction{
 
 
 let isPseudo = 1 in {
-def SELECT_LT:SEL_PAT<SETULT>;
-def SELECT_SLT:SEL_PAT<SETLT>;
-def SELECT_EQ:SEL_PAT<SETEQ>;
-def SELECT_NE:SEL_PAT<SETNE>;
-def SELECT_GT:SEL_PAT<SETUGT>;
-def SELECT_SGT:SEL_PAT<SETGT>;
+def SELECT_LT:SEL_PAT<SETULT,"LT">;
+def SELECT_SLT:SEL_PAT<SETLT,"SLT">;
+def SELECT_EQ:SEL_PAT<SETEQ,"EQ">;
+def SELECT_NE:SEL_PAT<SETNE,"NE">;
+def SELECT_GT:SEL_PAT<SETUGT,"GT">;
+def SELECT_SGT:SEL_PAT<SETGT,"SGT">;
 def CALLSTACKDOWN : LongINS<0x00,(outs),(ins i32imm:$amt,i32imm:$amt2),"ERROR!",[(callseq_start timm:$amt,timm:$amt2)]>;
 def CALLSTACKUP:LongINS<0x00,(outs),(ins i32imm:$amt,i32imm:$amt2),"ERROR!",[(callseq_end timm:$amt,timm:$amt2)]>;
 }
