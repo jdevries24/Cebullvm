@@ -38,6 +38,8 @@ class JRISCdevTTIImpl : public BasicTTIImplBase<JRISCdevTTIImpl> {
                                    TTI::TargetCostKind CostKind) {
     return InstructionCost::getMin();
   }
+	unsigned adjustInliningThreshold(const CallBase *CB){return 0;}
+	unsigned getInliningThresholdMultiplier() const { return 0; }
 
 };
 } 
