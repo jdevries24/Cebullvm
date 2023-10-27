@@ -22,6 +22,7 @@ add_llvm_target(JRISCdevCodeGen
     JRISCdevMClower.cpp
     JRISCdevTargetTransformInfo.cpp
     JRISCdevAsmOutput.cpp
+    JRISCdevExpandPseudoInsts.cpp
     
     LINK_COMPONENTS
     Analysis

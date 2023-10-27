@@ -10,7 +10,6 @@
 namespace llvm{
 
 namespace {
-/// MSP430 Code Generator Pass Configuration Options.
 class JRISCdevPassConfig : public TargetPassConfig {
 public:
   JRISCdevPassConfig(JRISCdevTargetMachine &TM, PassManagerBase &PM)
@@ -21,6 +20,7 @@ public:
   }
 
   bool addInstSelector() override;
+  void addPostRegAlloc() override;
 };
 }
 
@@ -100,6 +100,10 @@ bool JRISCdevTargetMachine::addCodeFileOut(PassManagerBase &PM,
 bool JRISCdevPassConfig::addInstSelector(){
   addPass(createJRISCdevISelDag(getJRISCdevTargetMachine(),getOptLevel()));
   return false;
+}
+
+void JRISCdevPassConfig::addPostRegAlloc(){
+  addPass(createJRISCdevExpandPseudoPass());
 }
 
 TargetPassConfig *JRISCdevTargetMachine::createPassConfig(PassManagerBase &PM){

@@ -44,6 +44,7 @@ class JRISCdevTargetMachine : public LLVMTargetMachine{
 };
 
 FunctionPass *createJRISCdevISelDag(JRISCdevTargetMachine &TM,CodeGenOptLevel lev);
+FunctionPass *createJRISCdevExpandPseudoPass();
 }
 
 #endif
