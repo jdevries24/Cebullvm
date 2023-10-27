@@ -30,25 +30,23 @@ using namespace llvm;
 
 
 JRISCdevILowering::JRISCdevILowering(const TargetMachine &TM,const JRISCdevSubtarget &STI):TargetLowering(TM)
-    {
-        static const MVT TV[] = {MVT::i1,MVT::i8,MVT::i16,MVT::i32};
-        ArrayRef<MVT> xVT(TV,4);
-        addRegisterClass(MVT::i32,&JRISCdev::GPregsRegClass);
-        computeRegisterProperties(STI.getRegisterInfo());
-        setJumpIsExpensive(false);
-        setOperationAction(ISD::SELECT_CC,MVT::i32,Custom);
-        setOperationAction(ISD::ROTL,MVT::i32,Custom);
-        setOperationAction(ISD::ROTR,MVT::i32,Custom);
-        setOperationAction(ISD::BR_CC,MVT::i32,Custom);
-        setOperationAction(ISD::Constant,MVT::i32,Custom);
-        setOperationAction(ISD::GlobalAddress,MVT::i32,Custom);
-        setOperationAction(ISD::SETCC,MVT::i32,Expand);
-        setOperationAction(ISD::SIGN_EXTEND_INREG,MVT::i8,Custom);
-        setOperationAction(ISD::SIGN_EXTEND_INREG,MVT::i16,Custom);
-	setOperationAction(ISD::BR_JT,MVT::Other,Expand);
-	setOperationAction(ISD::BRIND,MVT::Other,Expand);
-	setOperationAction(ISD::BRCOND,MVT::Other,Custom);
-    }
+{
+  addRegisterClass(MVT::i32,&JRISCdev::GPregsRegClass);
+  computeRegisterProperties(STI.getRegisterInfo());
+  setJumpIsExpensive(false);
+  setOperationAction(ISD::SELECT_CC,MVT::i32,Custom);
+  setOperationAction(ISD::ROTL,MVT::i32,Custom);
+  setOperationAction(ISD::ROTR,MVT::i32,Custom);
+  setOperationAction(ISD::BR_CC,MVT::i32,Custom);
+  setOperationAction(ISD::Constant,MVT::i32,Custom);
+  setOperationAction(ISD::GlobalAddress,MVT::i32,Custom);
+  setOperationAction(ISD::SETCC,MVT::i32,Expand);
+  setOperationAction(ISD::SIGN_EXTEND_INREG,MVT::i8,Custom);
+  setOperationAction(ISD::SIGN_EXTEND_INREG,MVT::i16,Custom);
+  setOperationAction(ISD::BR_JT,MVT::Other,Expand);
+  setOperationAction(ISD::BRIND,MVT::Other,Expand);
+  setOperationAction(ISD::BRCOND,MVT::Other,Custom);
+}
 
 SDValue JRISCdevILowering::LowerConst(SDValue Op,SelectionDAG &DAG) const{
     ConstantSDNode *Const = cast<ConstantSDNode>(Op.getNode());
