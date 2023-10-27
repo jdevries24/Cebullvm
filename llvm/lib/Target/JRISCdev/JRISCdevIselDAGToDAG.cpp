@@ -45,11 +45,6 @@ bool JRISCdevDAGToDAGISel::SelectAddr(SDValue Addr,SDValue &Base,SDValue &Offset
     Offset = CurDAG->getTargetConstant(0,dl,MVT::i32);
     return true;
   }
-  if (Addr.getOpcode() == ISD::TargetExternalSymbol ||
-      Addr.getOpcode() == ISD::TargetGlobalAddress ||
-      Addr.getOpcode() == ISD::TargetGlobalTLSAddress) {
-    return false; // direct calls.
-  }
   if((Addr.getOpcode() == ISD::ADD) && (Addr.getOperand(1).getOpcode() == ISD::Constant)){
     ConstantSDNode *CNode = cast<ConstantSDNode>(Addr.getOperand(1));
     if((CNode->getSExtValue() < 0xffff) && (CNode->getSExtValue() > -65500)){
