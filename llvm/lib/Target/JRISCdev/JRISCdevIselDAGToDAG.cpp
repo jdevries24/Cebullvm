@@ -28,6 +28,7 @@ public:
       bool SelectAddr(SDValue Addr,SDValue &Base,SDValue &Offset);
       void SelectConst(SDNode *Node);
       void SelectLargeConst(ConstantSDNode *Node);
+      void SelectFrameIndex(SDNode *Node);
       void Select(SDNode *Node) override;
 };
 
@@ -91,10 +92,21 @@ void JRISCdevDAGToDAGISel::SelectConst(SDNode *node){
   }
 }
 
+void JRISCdevDAGToDAGISel::SelectFrameIndex(SDNode *node){
+  if(FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(node)){
+    SDLoc dl(node);
+    EVT PtrVT = getTargetLowering()->getPointerTy(CurDAG->getDataLayout());
+    CurDAG->SelectNodeTo(node,JRISCdev::ADDI,MVT::i32,CurDAG->getTargetFrameIndex(FIN->getIndex(),PtrVT),CurDAG->getTargetConstant(0,dl,MVT::i32));
+  }
+}
+
 void JRISCdevDAGToDAGISel::Select(SDNode *node){
   switch(node->getOpcode()){
     case ISD::Constant:
       SelectConst(node);
+      break;
+    case ISD::FrameIndex:
+      SelectFrameIndex(node);
       break;
     default:
       SelectCode(node);
