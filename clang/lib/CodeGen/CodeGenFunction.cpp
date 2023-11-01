@@ -2594,15 +2594,10 @@ void CodeGenFunction::checkTargetFeatures(SourceLocation Loc,
   std::string MissingFeature;
   llvm::StringMap<bool> CallerFeatureMap;
   CGM.getContext().getFunctionFeatureMap(CallerFeatureMap, FD);
-  // When compiling in HipStdPar mode we have to be conservative in rejecting
-  // target specific features in the FE, and defer the possible error to the
-  // AcceleratorCodeSelection pass, wherein iff an unsupported target builtin is
-  // referenced by an accelerator executable function, we emit an error.
-  bool IsHipStdPar = getLangOpts().HIPStdPar && getLangOpts().CUDAIsDevice;
   if (BuiltinID) {
     StringRef FeatureList(CGM.getContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
     if (!Builtin::evaluateRequiredTargetFeatures(
-        FeatureList, CallerFeatureMap) && !IsHipStdPar) {
+        FeatureList, CallerFeatureMap)) {
       CGM.getDiags().Report(Loc, diag::err_builtin_needs_feature)
           << TargetDecl->getDeclName()
           << FeatureList;
@@ -2635,7 +2630,7 @@ void CodeGenFunction::checkTargetFeatures(SourceLocation Loc,
         return false;
       }
       return true;
-    }) && !IsHipStdPar)
+    }))
       CGM.getDiags().Report(Loc, diag::err_function_needs_feature)
           << FD->getDeclName() << TargetDecl->getDeclName() << MissingFeature;
   } else if (!FD->isMultiVersion() && FD->hasAttr<TargetAttr>()) {
@@ -2644,8 +2639,7 @@ void CodeGenFunction::checkTargetFeatures(SourceLocation Loc,
 
     for (const auto &F : CalleeFeatureMap) {
       if (F.getValue() && (!CallerFeatureMap.lookup(F.getKey()) ||
-                           !CallerFeatureMap.find(F.getKey())->getValue()) &&
-          !IsHipStdPar)
+                           !CallerFeatureMap.find(F.getKey())->getValue()))
         CGM.getDiags().Report(Loc, diag::err_function_needs_feature)
             << FD->getDeclName() << TargetDecl->getDeclName() << F.getKey();
     }

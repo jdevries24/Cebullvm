@@ -48,14 +48,15 @@ bool mlirAttributeIsASparseTensorEncodingAttr(MlirAttribute attr) {
 MlirAttribute
 mlirSparseTensorEncodingAttrGet(MlirContext ctx, intptr_t lvlRank,
                                 MlirSparseTensorDimLevelType const *lvlTypes,
-                                MlirAffineMap dimToLvl, MlirAffineMap lvlToDim,
-                                int posWidth, int crdWidth) {
+                                MlirAffineMap dimToLvl, int posWidth,
+                                int crdWidth) {
   SmallVector<DimLevelType> cppLvlTypes;
   cppLvlTypes.reserve(lvlRank);
   for (intptr_t l = 0; l < lvlRank; ++l)
     cppLvlTypes.push_back(static_cast<DimLevelType>(lvlTypes[l]));
+  mlir::AffineMap lvlToDim; // TODO: provide in API
   return wrap(SparseTensorEncodingAttr::get(unwrap(ctx), cppLvlTypes,
-                                            unwrap(dimToLvl), unwrap(lvlToDim),
+                                            unwrap(dimToLvl), lvlToDim,
                                             posWidth, crdWidth));
 }
 

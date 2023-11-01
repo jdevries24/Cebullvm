@@ -496,7 +496,7 @@ private:
   AddressPool AddrPool;
 
   /// Accelerator tables.
-  DWARF5AccelTable AccelDebugNames;
+  AccelTable<DWARF5AccelTableData> AccelDebugNames;
   AccelTable<AppleAccelTableOffsetData> AccelNames;
   AccelTable<AppleAccelTableOffsetData> AccelObjC;
   AccelTable<AppleAccelTableOffsetData> AccelNamespace;

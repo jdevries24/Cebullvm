@@ -45,8 +45,7 @@ COFFLinkGraphBuilder::getPointerSize(const object::COFFObjectFile &Obj) {
 
 llvm::endianness
 COFFLinkGraphBuilder::getEndianness(const object::COFFObjectFile &Obj) {
-  return Obj.isLittleEndian() ? llvm::endianness::little
-                              : llvm::endianness::big;
+  return Obj.isLittleEndian() ? support::little : support::big;
 }
 
 uint64_t COFFLinkGraphBuilder::getSectionSize(const object::COFFObjectFile &Obj,

@@ -47,15 +47,6 @@ add_gen_header(
 )
 
 add_gen_header(
-  features
-  DEF_FILE features.h.def
-  GEN_HDR features.h
-  DEPENDS
-    .llvm_libc_common_h
-    .llvm-libc-macros.features_macros
-)
-
-add_gen_header(
   fenv
   DEF_FILE fenv.h.def
   GEN_HDR fenv.h

@@ -18,7 +18,6 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -477,15 +476,6 @@ public:
 
   // Return true if this is a FileContext Decl.
   bool isFileContextDecl() const;
-
-  /// Whether it resembles a flexible array member. This is a static member
-  /// because we want to be able to call it with a nullptr. That allows us to
-  /// perform non-Decl specific checks based on the object's type and strict
-  /// flex array level.
-  static bool isFlexibleArrayMemberLike(
-      ASTContext &Context, const Decl *D, QualType Ty,
-      LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
-      bool IgnoreTemplateOrMacroSubstitution);
 
   ASTContext &getASTContext() const LLVM_READONLY;
 
@@ -1399,11 +1389,6 @@ enum class DeductionCandidate : unsigned char {
   Aggregate,
 };
 
-enum class RecordArgPassingKind;
-enum class OMPDeclareReductionInitKind;
-enum class ObjCImplementationControl;
-enum class LinkageSpecLanguageIDs;
-
 /// DeclContext - This is used only as base class of specific decl types that
 /// can act as declaration contexts. These decls are (only the top classes
 /// that directly derive from DeclContext are mentioned, not their subclasses):
@@ -1520,14 +1505,16 @@ class DeclContext {
     uint64_t IsThisDeclarationADemotedDefinition : 1;
   };
 
-  /// Number of inherited and non-inherited bits in TagDeclBitfields.
-  enum { NumTagDeclBits = NumDeclContextBits + 10 };
+  /// Number of non-inherited bits in TagDeclBitfields.
+  enum { NumTagDeclBits = 10 };
 
   /// Stores the bits used by EnumDecl.
   /// If modified NumEnumDeclBit and the accessor
   /// methods in EnumDecl should be updated appropriately.
   class EnumDeclBitfields {
     friend class EnumDecl;
+    /// For the bits in DeclContextBitfields.
+    uint64_t : NumDeclContextBits;
     /// For the bits in TagDeclBitfields.
     uint64_t : NumTagDeclBits;
 
@@ -1557,14 +1544,16 @@ class DeclContext {
     uint64_t HasODRHash : 1;
   };
 
-  /// Number of inherited and non-inherited bits in EnumDeclBitfields.
-  enum { NumEnumDeclBits = NumTagDeclBits + 20 };
+  /// Number of non-inherited bits in EnumDeclBitfields.
+  enum { NumEnumDeclBits = 20 };
 
   /// Stores the bits used by RecordDecl.
   /// If modified NumRecordDeclBits and the accessor
   /// methods in RecordDecl should be updated appropriately.
   class RecordDeclBitfields {
     friend class RecordDecl;
+    /// For the bits in DeclContextBitfields.
+    uint64_t : NumDeclContextBits;
     /// For the bits in TagDeclBitfields.
     uint64_t : NumTagDeclBits;
 
@@ -1616,8 +1605,8 @@ class DeclContext {
     uint64_t ODRHash : 26;
   };
 
-  /// Number of inherited and non-inherited bits in RecordDeclBitfields.
-  enum { NumRecordDeclBits = NumTagDeclBits + 41 };
+  /// Number of non-inherited bits in RecordDeclBitfields.
+  enum { NumRecordDeclBits = 41 };
 
   /// Stores the bits used by OMPDeclareReductionDecl.
   /// If modified NumOMPDeclareReductionDeclBits and the accessor
@@ -1632,9 +1621,8 @@ class DeclContext {
     uint64_t InitializerKind : 2;
   };
 
-  /// Number of inherited and non-inherited bits in
-  /// OMPDeclareReductionDeclBitfields.
-  enum { NumOMPDeclareReductionDeclBits = NumDeclContextBits + 2 };
+  /// Number of non-inherited bits in OMPDeclareReductionDeclBitfields.
+  enum { NumOMPDeclareReductionDeclBits = 2 };
 
   /// Stores the bits used by FunctionDecl.
   /// If modified NumFunctionDeclBits and the accessor
@@ -1713,14 +1701,16 @@ class DeclContext {
     uint64_t FriendConstraintRefersToEnclosingTemplate : 1;
   };
 
-  /// Number of inherited and non-inherited bits in FunctionDeclBitfields.
-  enum { NumFunctionDeclBits = NumDeclContextBits + 31 };
+  /// Number of non-inherited bits in FunctionDeclBitfields.
+  enum { NumFunctionDeclBits = 31 };
 
   /// Stores the bits used by CXXConstructorDecl. If modified
   /// NumCXXConstructorDeclBits and the accessor
   /// methods in CXXConstructorDecl should be updated appropriately.
   class CXXConstructorDeclBitfields {
     friend class CXXConstructorDecl;
+    /// For the bits in DeclContextBitfields.
+    uint64_t : NumDeclContextBits;
     /// For the bits in FunctionDeclBitfields.
     uint64_t : NumFunctionDeclBits;
 
@@ -1739,8 +1729,10 @@ class DeclContext {
     uint64_t IsSimpleExplicit : 1;
   };
 
-  /// Number of inherited and non-inherited bits in CXXConstructorDeclBitfields.
-  enum { NumCXXConstructorDeclBits = NumFunctionDeclBits + 20 };
+  /// Number of non-inherited bits in CXXConstructorDeclBitfields.
+  enum {
+    NumCXXConstructorDeclBits = 64 - NumDeclContextBits - NumFunctionDeclBits
+  };
 
   /// Stores the bits used by ObjCMethodDecl.
   /// If modified NumObjCMethodDeclBits and the accessor
@@ -1801,8 +1793,8 @@ class DeclContext {
     uint64_t HasSkippedBody : 1;
   };
 
-  /// Number of inherited and non-inherited bits in ObjCMethodDeclBitfields.
-  enum { NumObjCMethodDeclBits = NumDeclContextBits + 24 };
+  /// Number of non-inherited bits in ObjCMethodDeclBitfields.
+  enum { NumObjCMethodDeclBits = 24 };
 
   /// Stores the bits used by ObjCContainerDecl.
   /// If modified NumObjCContainerDeclBits and the accessor
@@ -1817,10 +1809,10 @@ class DeclContext {
     SourceLocation AtStart;
   };
 
-  /// Number of inherited and non-inherited bits in ObjCContainerDeclBitfields.
+  /// Number of non-inherited bits in ObjCContainerDeclBitfields.
   /// Note that here we rely on the fact that SourceLocation is 32 bits
   /// wide. We check this with the static_assert in the ctor of DeclContext.
-  enum { NumObjCContainerDeclBits = 64 };
+  enum { NumObjCContainerDeclBits = 64 - NumDeclContextBits };
 
   /// Stores the bits used by LinkageSpecDecl.
   /// If modified NumLinkageSpecDeclBits and the accessor
@@ -1841,8 +1833,8 @@ class DeclContext {
     uint64_t HasBraces : 1;
   };
 
-  /// Number of inherited and non-inherited bits in LinkageSpecDeclBitfields.
-  enum { NumLinkageSpecDeclBits = NumDeclContextBits + 4 };
+  /// Number of non-inherited bits in LinkageSpecDeclBitfields.
+  enum { NumLinkageSpecDeclBits = 4 };
 
   /// Stores the bits used by BlockDecl.
   /// If modified NumBlockDeclBits and the accessor
@@ -1867,8 +1859,8 @@ class DeclContext {
     uint64_t CanAvoidCopyToHeap : 1;
   };
 
-  /// Number of inherited and non-inherited bits in BlockDeclBitfields.
-  enum { NumBlockDeclBits = NumDeclContextBits + 5 };
+  /// Number of non-inherited bits in BlockDeclBitfields.
+  enum { NumBlockDeclBits = 5 };
 
   /// Pointer to the data structure used to lookup declarations
   /// within this context (or a DependentStoredDeclsMap if this is a

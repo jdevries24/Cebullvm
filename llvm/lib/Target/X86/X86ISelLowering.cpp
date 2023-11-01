@@ -3257,73 +3257,6 @@ bool X86TargetLowering::
   return NewShiftOpcode == ISD::SHL;
 }
 
-unsigned X86TargetLowering::preferedOpcodeForCmpEqPiecesOfOperand(
-    EVT VT, unsigned ShiftOpc, bool MayTransformRotate,
-    const APInt &ShiftOrRotateAmt, const std::optional<APInt> &AndMask) const {
-  if (!VT.isInteger())
-    return ShiftOpc;
-
-  bool PreferRotate = false;
-  if (VT.isVector()) {
-    // For vectors, if we have rotate instruction support, then its definetly
-    // best. Otherwise its not clear what the best so just don't make changed.
-    PreferRotate = Subtarget.hasAVX512() && (VT.getScalarType() == MVT::i32 ||
-                                             VT.getScalarType() == MVT::i64);
-  } else {
-    // For scalar, if we have bmi prefer rotate for rorx. Otherwise prefer
-    // rotate unless we have a zext mask+shr.
-    PreferRotate = Subtarget.hasBMI2();
-    if (!PreferRotate) {
-      unsigned MaskBits =
-          VT.getScalarSizeInBits() - ShiftOrRotateAmt.getZExtValue();
-      PreferRotate = (MaskBits != 8) && (MaskBits != 16) && (MaskBits != 32);
-    }
-  }
-
-  if (ShiftOpc == ISD::SHL || ShiftOpc == ISD::SRL) {
-    assert(AndMask.has_value() && "Null andmask when querying about shift+and");
-
-    if (PreferRotate && MayTransformRotate)
-      return ISD::ROTL;
-
-    // If vector we don't really get much benefit swapping around constants.
-    // Maybe we could check if the DAG has the flipped node already in the
-    // future.
-    if (VT.isVector())
-      return ShiftOpc;
-
-    // See if the beneficial to swap shift type.
-    if (ShiftOpc == ISD::SHL) {
-      // If the current setup has imm64 mask, then inverse will have
-      // at least imm32 mask (or be zext i32 -> i64).
-      if (VT == MVT::i64)
-        return AndMask->getSignificantBits() > 32 ? (unsigned)ISD::SRL
-                                                  : ShiftOpc;
-
-      // We can only benefit if req at least 7-bit for the mask. We
-      // don't want to replace shl of 1,2,3 as they can be implemented
-      // with lea/add.
-      return ShiftOrRotateAmt.uge(7) ? (unsigned)ISD::SRL : ShiftOpc;
-    }
-
-    if (VT == MVT::i64)
-      // Keep exactly 32-bit imm64, this is zext i32 -> i64 which is
-      // extremely efficient.
-      return AndMask->getSignificantBits() > 33 ? (unsigned)ISD::SHL : ShiftOpc;
-
-    // Keep small shifts as shl so we can generate add/lea.
-    return ShiftOrRotateAmt.ult(7) ? (unsigned)ISD::SHL : ShiftOpc;
-  }
-
-  // We prefer rotate for vectors of if we won't get a zext mask with SRL
-  // (PreferRotate will be set in the latter case).
-  if (PreferRotate || VT.isVector())
-    return ShiftOpc;
-
-  // Non-vector type and we have a zext mask with SRL.
-  return ISD::SRL;
-}
-
 bool X86TargetLowering::preferScalarizeSplat(SDNode *N) const {
   return N->getOpcode() != ISD::FP_EXTEND;
 }
@@ -15293,12 +15226,6 @@ static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
       for (int i = 0; i != NumElts; i += NumBroadcastElts)
         for (int j = 0; j != NumBroadcastElts; ++j)
           BroadcastMask[i + j] = j;
-
-      // Avoid returning the same shuffle operation. For example,
-      // v8i32 = vector_shuffle<0,1,0,1,0,1,0,1> t5, undef:v8i32
-      if (BroadcastMask == Mask)
-        return SDValue();
-
       return DAG.getVectorShuffle(VT, DL, RepeatShuf, DAG.getUNDEF(VT),
                                   BroadcastMask);
     }
@@ -40758,7 +40685,7 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (TLI.isTypeLegal(VT) && !isSoftF16(VT, Subtarget))
+  if (TLI.isTypeLegal(VT))
     if (SDValue AddSub = combineShuffleToAddSubOrFMAddSub(N, Subtarget, DAG))
       return AddSub;
 
@@ -43942,15 +43869,10 @@ static SDValue combineArithReduction(SDNode *ExtElt, SelectionDAG &DAG,
       DAG.computeKnownBits(Rdx).getMaxValue().ule(255) &&
       (EltSizeInBits == 16 || Rdx.getOpcode() == ISD::ZERO_EXTEND ||
        Subtarget.hasAVX512())) {
-    if (Rdx.getValueType() == MVT::v8i16) {
-      Rdx = DAG.getNode(X86ISD::PACKUS, DL, MVT::v16i8, Rdx,
-                        DAG.getUNDEF(MVT::v8i16));
-    } else {
-      EVT ByteVT = VecVT.changeVectorElementType(MVT::i8);
-      Rdx = DAG.getNode(ISD::TRUNCATE, DL, ByteVT, Rdx);
-      if (ByteVT.getSizeInBits() < 128)
-        Rdx = WidenToV16I8(Rdx, true);
-    }
+    EVT ByteVT = VecVT.changeVectorElementType(MVT::i8);
+    Rdx = DAG.getNode(ISD::TRUNCATE, DL, ByteVT, Rdx);
+    if (ByteVT.getSizeInBits() < 128)
+      Rdx = WidenToV16I8(Rdx, true);
 
     // Build the PSADBW, split as 128/256/512 bits for SSE/AVX2/AVX512BW.
     auto PSADBWBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
@@ -49604,12 +49526,14 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
                       (Subtarget.hasVLX() || InVT.getSizeInBits() > 256) &&
                       !(!Subtarget.useAVX512Regs() && VT.getSizeInBits() >= 256);
 
-  if (!PreferAVX512 && VT.getVectorNumElements() > 1 &&
-      isPowerOf2_32(VT.getVectorNumElements()) &&
+  if (isPowerOf2_32(VT.getVectorNumElements()) && !PreferAVX512 &&
+      VT.getSizeInBits() >= 64 &&
       (SVT == MVT::i8 || SVT == MVT::i16) &&
       (InSVT == MVT::i16 || InSVT == MVT::i32)) {
     if (SDValue USatVal = detectSSatPattern(In, VT, true)) {
       // vXi32 -> vXi8 must be performed as PACKUSWB(PACKSSDW,PACKSSDW).
+      // Only do this when the result is at least 64 bits or we'll leaving
+      // dangling PACKSSDW nodes.
       if (SVT == MVT::i8 && InSVT == MVT::i32) {
         EVT MidVT = VT.changeVectorElementType(MVT::i16);
         SDValue Mid = truncateVectorWithPACK(X86ISD::PACKSS, MidVT, USatVal, DL,
@@ -56995,15 +56919,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v8f16:
         if (!Subtarget.hasFP16())
           break;
-        if (VConstraint)
-          return std::make_pair(0U, &X86::VR128XRegClass);
-        return std::make_pair(0U, &X86::VR128RegClass);
-      case MVT::v8bf16:
-        if (!Subtarget.hasBF16() || !Subtarget.hasVLX())
-          break;
-        if (VConstraint)
-          return std::make_pair(0U, &X86::VR128XRegClass);
-        return std::make_pair(0U, &X86::VR128RegClass);
+        [[fallthrough]];
       case MVT::f128:
       case MVT::v16i8:
       case MVT::v8i16:
@@ -57018,15 +56934,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v16f16:
         if (!Subtarget.hasFP16())
           break;
-        if (VConstraint)
-          return std::make_pair(0U, &X86::VR256XRegClass);
-        return std::make_pair(0U, &X86::VR256RegClass);
-      case MVT::v16bf16:
-        if (!Subtarget.hasBF16() || !Subtarget.hasVLX())
-          break;
-        if (VConstraint)
-          return std::make_pair(0U, &X86::VR256XRegClass);
-        return std::make_pair(0U, &X86::VR256RegClass);
+        [[fallthrough]];
       case MVT::v32i8:
       case MVT::v16i16:
       case MVT::v8i32:
@@ -57041,15 +56949,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v32f16:
         if (!Subtarget.hasFP16())
           break;
-        if (VConstraint)
-          return std::make_pair(0U, &X86::VR512RegClass);
-        return std::make_pair(0U, &X86::VR512_0_15RegClass);
-      case MVT::v32bf16:
-        if (!Subtarget.hasBF16())
-          break;
-        if (VConstraint)
-          return std::make_pair(0U, &X86::VR512RegClass);
-        return std::make_pair(0U, &X86::VR512_0_15RegClass);
+        [[fallthrough]];
       case MVT::v64i8:
       case MVT::v32i16:
       case MVT::v8f64:
@@ -57092,11 +56992,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v8f16:
         if (!Subtarget.hasFP16())
           break;
-        return std::make_pair(X86::XMM0, &X86::VR128RegClass);
-      case MVT::v8bf16:
-        if (!Subtarget.hasBF16() || !Subtarget.hasVLX())
-          break;
-        return std::make_pair(X86::XMM0, &X86::VR128RegClass);
+        [[fallthrough]];
       case MVT::f128:
       case MVT::v16i8:
       case MVT::v8i16:
@@ -57109,11 +57005,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v16f16:
         if (!Subtarget.hasFP16())
           break;
-        return std::make_pair(X86::YMM0, &X86::VR256RegClass);
-      case MVT::v16bf16:
-        if (!Subtarget.hasBF16() || !Subtarget.hasVLX())
-          break;
-        return std::make_pair(X86::YMM0, &X86::VR256RegClass);
+        [[fallthrough]];
       case MVT::v32i8:
       case MVT::v16i16:
       case MVT::v8i32:
@@ -57126,11 +57018,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v32f16:
         if (!Subtarget.hasFP16())
           break;
-        return std::make_pair(X86::ZMM0, &X86::VR512_0_15RegClass);
-      case MVT::v32bf16:
-        if (!Subtarget.hasBF16())
-          break;
-        return std::make_pair(X86::ZMM0, &X86::VR512_0_15RegClass);
+        [[fallthrough]];
       case MVT::v64i8:
       case MVT::v32i16:
       case MVT::v8f64:

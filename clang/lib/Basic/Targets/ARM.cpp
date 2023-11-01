@@ -258,7 +258,6 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
   bool IsOpenBSD = Triple.isOSOpenBSD();
   bool IsNetBSD = Triple.isOSNetBSD();
   bool IsHaiku = Triple.isOSHaiku();
-  bool IsOHOS = Triple.isOHOSFamily();
 
   // FIXME: the isOSBinFormatMachO is a workaround for identifying a Darwin-like
   // environment where size_t is `unsigned long` rather than `unsigned int`
@@ -325,7 +324,7 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
     default:
       if (IsNetBSD)
         setABI("apcs-gnu");
-      else if (IsFreeBSD || IsOpenBSD || IsHaiku || IsOHOS)
+      else if (IsFreeBSD || IsOpenBSD || IsHaiku)
         setABI("aapcs-linux");
       else
         setABI("aapcs");

@@ -465,10 +465,13 @@ LVScope *LVNamespaceDeduction::get(LVStringRefs Components) {
 LVScope *LVNamespaceDeduction::get(StringRef ScopedName, bool CheckScope) {
   LVStringRefs Components = getAllLexicalComponents(ScopedName);
   if (CheckScope)
-    llvm::erase_if(Components, [&](StringRef Component) {
-      LookupSet::iterator Iter = IdentifiedNamespaces.find(Component);
-      return Iter == IdentifiedNamespaces.end();
-    });
+    Components.erase(std::remove_if(Components.begin(), Components.end(),
+                                    [&](StringRef Component) {
+                                      LookupSet::iterator Iter =
+                                          IdentifiedNamespaces.find(Component);
+                                      return Iter == IdentifiedNamespaces.end();
+                                    }),
+                     Components.end());
 
   LLVM_DEBUG(
       { dbgs() << formatv("ScopedName: '{0}'\n", ScopedName.str().c_str()); });

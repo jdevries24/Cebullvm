@@ -54,9 +54,7 @@ public:
   createDirectoryStream(const MSFLayout &Layout, BinaryStreamRef MsfData,
                         BumpPtrAllocator &Allocator);
 
-  llvm::endianness getEndian() const override {
-    return llvm::endianness::little;
-  }
+  llvm::endianness getEndian() const override { return support::little; }
 
   Error readBytes(uint64_t Offset, uint64_t Size,
                   ArrayRef<uint8_t> &Buffer) override;
@@ -121,9 +119,7 @@ public:
   createFpmStream(const MSFLayout &Layout, WritableBinaryStreamRef MsfData,
                   BumpPtrAllocator &Allocator, bool AltFpm = false);
 
-  llvm::endianness getEndian() const override {
-    return llvm::endianness::little;
-  }
+  llvm::endianness getEndian() const override { return support::little; }
 
   Error readBytes(uint64_t Offset, uint64_t Size,
                   ArrayRef<uint8_t> &Buffer) override;

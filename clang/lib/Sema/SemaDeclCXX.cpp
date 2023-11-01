@@ -1299,9 +1299,8 @@ static bool checkTupleLikeDecomposition(Sema &S,
       //   in the associated namespaces.
       Expr *Get = UnresolvedLookupExpr::Create(
           S.Context, nullptr, NestedNameSpecifierLoc(), SourceLocation(),
-          DeclarationNameInfo(GetDN, Loc), /*RequiresADL*/ true, &Args,
-          UnresolvedSetIterator(), UnresolvedSetIterator(),
-          /*KnownDependent=*/false);
+          DeclarationNameInfo(GetDN, Loc), /*RequiresADL*/true, &Args,
+          UnresolvedSetIterator(), UnresolvedSetIterator());
 
       Expr *Arg = E.get();
       E = S.BuildCallExpr(nullptr, Get, Loc, Arg, Loc);
@@ -2457,8 +2456,7 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
       !Expr::isPotentialConstantExpr(Dcl, Diags)) {
     SemaRef.Diag(Dcl->getLocation(),
                  diag::ext_constexpr_function_never_constant_expr)
-        << isa<CXXConstructorDecl>(Dcl) << Dcl->isConsteval()
-        << Dcl->getNameInfo().getSourceRange();
+        << isa<CXXConstructorDecl>(Dcl) << Dcl->isConsteval();
     for (size_t I = 0, N = Diags.size(); I != N; ++I)
       SemaRef.Diag(Diags[I].first, Diags[I].second);
     // Don't return false here: we allow this for compatibility in
@@ -4511,9 +4509,9 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
         if (!NotUnknownSpecialization) {
           // When the scope specifier can refer to a member of an unknown
           // specialization, we take it as a type name.
-          BaseType = CheckTypenameType(
-              ElaboratedTypeKeyword::None, SourceLocation(),
-              SS.getWithLocInContext(Context), *MemberOrBase, IdLoc);
+          BaseType = CheckTypenameType(ETK_None, SourceLocation(),
+                                       SS.getWithLocInContext(Context),
+                                       *MemberOrBase, IdLoc);
           if (BaseType.isNull())
             return true;
 
@@ -4596,8 +4594,7 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
     }
 
     if (BaseType.isNull()) {
-      BaseType = getElaboratedType(ElaboratedTypeKeyword::None, SS,
-                                   Context.getTypeDeclType(TyD));
+      BaseType = getElaboratedType(ETK_None, SS, Context.getTypeDeclType(TyD));
       MarkAnyDeclReferenced(TyD->getLocation(), TyD, /*OdrUse=*/false);
       TInfo = Context.CreateTypeSourceInfo(BaseType);
       ElaboratedTypeLoc TL = TInfo->getTypeLoc().castAs<ElaboratedTypeLoc>();
@@ -7280,12 +7277,11 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   bool CanPass = canPassInRegisters(*this, Record, CCK);
 
   // Do not change ArgPassingRestrictions if it has already been set to
-  // ArgPassingKind::CanNeverPassInRegs.
-  if (Record->getArgPassingRestrictions() !=
-      RecordArgPassingKind::CanNeverPassInRegs)
-    Record->setArgPassingRestrictions(
-        CanPass ? RecordArgPassingKind::CanPassInRegs
-                : RecordArgPassingKind::CannotPassInRegs);
+  // APK_CanNeverPassInRegs.
+  if (Record->getArgPassingRestrictions() != RecordDecl::APK_CanNeverPassInRegs)
+    Record->setArgPassingRestrictions(CanPass
+                                          ? RecordDecl::APK_CanPassInRegs
+                                          : RecordDecl::APK_CannotPassInRegs);
 
   // If canPassInRegisters returns true despite the record having a non-trivial
   // destructor, the record is destructed in the callee. This happens only when
@@ -7729,8 +7725,7 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
     QualType ThisType = MD->getFunctionObjectParameterType();
 
     QualType DeclType = Context.getTypeDeclType(RD);
-    DeclType = Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr,
-                                         DeclType, nullptr);
+    DeclType = Context.getElaboratedType(ETK_None, nullptr, DeclType, nullptr);
     DeclType = Context.getAddrSpaceQualType(
         DeclType, ThisType.getQualifiers().getAddressSpace());
     QualType ExpectedReturnType = Context.getLValueReferenceType(DeclType);
@@ -7748,24 +7743,6 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
       else {
         Diag(MD->getLocation(), diag::err_defaulted_special_member_quals)
           << (CSM == CXXMoveAssignment) << getLangOpts().CPlusPlus14;
-        HadError = true;
-      }
-    }
-    // [C++23][dcl.fct.def.default]/p2.2
-    // if F2 has an implicit object parameter of type “reference to C”,
-    // F1 may be an explicit object member function whose explicit object
-    // parameter is of (possibly different) type “reference to C”,
-    // in which case the type of F1 would differ from the type of F2
-    // in that the type of F1 has an additional parameter;
-    if (!Context.hasSameType(
-            ThisType.getNonReferenceType().getUnqualifiedType(),
-            Context.getRecordType(RD))) {
-      if (DeleteOnTypeMismatch)
-        ShouldDeleteForTypeMismatch = true;
-      else {
-        Diag(MD->getLocation(),
-             diag::err_defaulted_special_member_explicit_object_mismatch)
-            << (CSM == CXXMoveAssignment) << RD << MD->getSourceRange();
         HadError = true;
       }
     }
@@ -11374,14 +11351,12 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
     Diag(ExplicitObjectParam->getBeginLoc(),
          diag::err_explicit_object_parameter_nonmember)
         << D.getSourceRange() << /*static=*/0 << IsLambda;
-    D.setInvalidType();
   }
 
   if (D.getDeclSpec().isVirtualSpecified()) {
     Diag(ExplicitObjectParam->getBeginLoc(),
          diag::err_explicit_object_parameter_nonmember)
         << D.getSourceRange() << /*virtual=*/1 << IsLambda;
-    D.setInvalidType();
   }
 
   if (IsLambda && FTI.hasMutableQualifier()) {
@@ -11397,19 +11372,16 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
     Diag(ExplicitObjectParam->getLocation(),
          diag::err_explicit_object_parameter_nonmember)
         << D.getSourceRange() << /*non-member=*/2 << IsLambda;
-    D.setInvalidType();
     return;
   }
 
   // CWG2674: constructors and destructors cannot have explicit parameters.
   if (Name.getNameKind() == DeclarationName::CXXConstructorName ||
-      Name.getNameKind() == DeclarationName::CXXDestructorName) {
+      Name.getNameKind() == DeclarationName::CXXDestructorName)
     Diag(ExplicitObjectParam->getBeginLoc(),
          diag::err_explicit_object_parameter_constructor)
         << (Name.getNameKind() == DeclarationName::CXXDestructorName)
         << D.getSourceRange();
-    D.setInvalidType();
-  }
 }
 
 namespace {
@@ -11839,8 +11811,7 @@ QualType Sema::CheckComparisonCategoryType(ComparisonCategoryType Kind,
   auto TyForDiags = [&](ComparisonCategoryInfo *Info) {
     auto *NNS =
         NestedNameSpecifier::Create(Context, nullptr, getStdNamespace());
-    return Context.getElaboratedType(ElaboratedTypeKeyword::None, NNS,
-                                     Info->getType());
+    return Context.getElaboratedType(ETK_None, NNS, Info->getType());
   };
 
   // Check if we've already successfully checked the comparison category type
@@ -12059,7 +12030,7 @@ QualType Sema::BuildStdInitializerList(QualType Element, SourceLocation Loc) {
                                        Context.getTrivialTypeSourceInfo(Element,
                                                                         Loc)));
   return Context.getElaboratedType(
-      ElaboratedTypeKeyword::None,
+      ElaboratedTypeKeyword::ETK_None,
       NestedNameSpecifier::Create(Context, nullptr, getStdNamespace()),
       CheckTemplateIdType(TemplateName(StdInitializerList), Loc, Args));
 }
@@ -14841,8 +14812,7 @@ CXXMethodDecl *Sema::DeclareImplicitCopyAssignment(CXXRecordDecl *ClassDecl) {
     return nullptr;
 
   QualType ArgType = Context.getTypeDeclType(ClassDecl);
-  ArgType = Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr,
-                                      ArgType, nullptr);
+  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
   LangAS AS = getDefaultCXXMethodAddrSpace();
   if (AS != LangAS::Default)
     ArgType = Context.getAddrSpaceQualType(ArgType, AS);
@@ -15195,8 +15165,7 @@ CXXMethodDecl *Sema::DeclareImplicitMoveAssignment(CXXRecordDecl *ClassDecl) {
   // constructor rules.
 
   QualType ArgType = Context.getTypeDeclType(ClassDecl);
-  ArgType = Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr,
-                                      ArgType, nullptr);
+  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
   LangAS AS = getDefaultCXXMethodAddrSpace();
   if (AS != LangAS::Default)
     ArgType = Context.getAddrSpaceQualType(ArgType, AS);
@@ -15585,8 +15554,7 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
 
   QualType ClassType = Context.getTypeDeclType(ClassDecl);
   QualType ArgType = ClassType;
-  ArgType = Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr,
-                                      ArgType, nullptr);
+  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
   bool Const = ClassDecl->implicitCopyConstructorHasConstParam();
   if (Const)
     ArgType = ArgType.withConst();
@@ -15731,8 +15699,7 @@ CXXConstructorDecl *Sema::DeclareImplicitMoveConstructor(
   QualType ClassType = Context.getTypeDeclType(ClassDecl);
 
   QualType ArgType = ClassType;
-  ArgType = Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr,
-                                      ArgType, nullptr);
+  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
   LangAS AS = getDefaultCXXMethodAddrSpace();
   if (AS != LangAS::Default)
     ArgType = Context.getAddrSpaceQualType(ClassType, AS);
@@ -16785,11 +16752,11 @@ Decl *Sema::ActOnStartLinkageSpecification(Scope *S, SourceLocation ExternLoc,
   assert(Lit->isUnevaluated() && "Unexpected string literal kind");
 
   StringRef Lang = Lit->getString();
-  LinkageSpecLanguageIDs Language;
+  LinkageSpecDecl::LanguageIDs Language;
   if (Lang == "C")
-    Language = LinkageSpecLanguageIDs::C;
+    Language = LinkageSpecDecl::lang_c;
   else if (Lang == "C++")
-    Language = LinkageSpecLanguageIDs::CXX;
+    Language = LinkageSpecDecl::lang_cxx;
   else {
     Diag(LangStr->getExprLoc(), diag::err_language_linkage_spec_unknown)
       << LangStr->getSourceRange();

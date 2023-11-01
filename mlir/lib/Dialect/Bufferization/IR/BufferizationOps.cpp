@@ -314,11 +314,7 @@ struct ReplaceStaticShapeDims : OpRewritePattern<AllocTensorOp> {
       Value value = op.getDynamicSizes()[dynValCounter++];
       APInt intVal;
       if (matchPattern(value, m_ConstantInt(&intVal))) {
-        int64_t dim = intVal.getSExtValue();
-        if (dim >= 0)
-          newShape[i] = intVal.getSExtValue();
-        else
-          newDynamicSizes.push_back(value);
+        newShape[i] = intVal.getSExtValue();
       } else {
         newDynamicSizes.push_back(value);
       }
@@ -541,12 +537,12 @@ LogicalResult DeallocTensorOp::bufferize(RewriterBase &rewriter,
 
 bool MaterializeInDestinationOp::bufferizesToMemoryRead(
     OpOperand &opOperand, const AnalysisState &state) {
-  return opOperand == getSourceMutable();
+  return &opOperand == &getSourceMutable();
 }
 
 bool MaterializeInDestinationOp::bufferizesToMemoryWrite(
     OpOperand &opOperand, const AnalysisState &state) {
-  if (opOperand == getDestMutable()) {
+  if (&opOperand == &getDestMutable()) {
     assert(isa<TensorType>(getDest().getType()) && "expected tensor type");
     return true;
   }
@@ -564,7 +560,7 @@ bool MaterializeInDestinationOp::mustBufferizeInPlace(
 AliasingValueList
 MaterializeInDestinationOp::getAliasingValues(OpOperand &opOperand,
                                               const AnalysisState &state) {
-  if (opOperand == getDestMutable()) {
+  if (&opOperand == &getDestMutable()) {
     assert(isa<TensorType>(getDest().getType()) && "expected tensor type");
     return {{getOperation()->getResult(0), BufferRelation::Equivalent}};
   }
@@ -645,18 +641,6 @@ MaterializeInDestinationOp::getValuesNeededToBuildSubsetExtraction() {
 
 OpOperand &MaterializeInDestinationOp::getSourceOperand() {
   return getOperation()->getOpOperand(0) /*source*/;
-}
-
-bool MaterializeInDestinationOp::operatesOnEquivalentSubset(
-    SubsetOpInterface subsetOp,
-    function_ref<bool(Value, Value)> equivalenceFn) {
-  return false;
-}
-
-bool MaterializeInDestinationOp::operatesOnDisjointSubset(
-    SubsetOpInterface subsetOp,
-    function_ref<bool(Value, Value)> equivalenceFn) {
-  return false;
 }
 
 LogicalResult MaterializeInDestinationOp::verify() {

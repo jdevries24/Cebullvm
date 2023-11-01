@@ -46,13 +46,11 @@ struct RISCVTuneInfo {
 
 class RISCVSubtarget : public RISCVGenSubtargetInfo {
 public:
-  // clang-format off
   enum RISCVProcFamilyEnum : uint8_t {
     Others,
     SiFive7,
-    VentanaVeyron,
   };
-  // clang-format on
+
 private:
   virtual void anchor();
 

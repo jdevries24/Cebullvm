@@ -73,12 +73,12 @@ class SVEType {
 public:
   SVEType() : SVEType(TypeSpec(), 'v') {}
 
-  SVEType(TypeSpec TS, char CharMod, unsigned NumVectors = 1)
+  SVEType(TypeSpec TS, char CharMod)
       : TS(TS), Float(false), Signed(true), Immediate(false), Void(false),
         Constant(false), Pointer(false), BFloat(false), DefaultType(false),
         IsScalable(true), Predicate(false), PredicatePattern(false),
         PrefetchOp(false), Svcount(false), Bitwidth(128), ElementBitwidth(~0U),
-        NumVectors(NumVectors) {
+        NumVectors(1) {
     if (!TS.empty())
       applyTypespec();
     applyModifier(CharMod);
@@ -194,9 +194,7 @@ public:
   SVEType getReturnType() const { return Types[0]; }
   ArrayRef<SVEType> getTypes() const { return Types; }
   SVEType getParamType(unsigned I) const { return Types[I + 1]; }
-  unsigned getNumParams() const {
-    return Proto.size() - (2 * llvm::count(Proto, '.')) - 1;
-  }
+  unsigned getNumParams() const { return Proto.size() - 1; }
 
   uint64_t getFlags() const { return Flags; }
   bool isFlagSet(uint64_t Flag) const { return Flags & Flag;}
@@ -230,19 +228,11 @@ public:
 
   /// Return the parameter index of the splat operand.
   unsigned getSplatIdx() const {
-    unsigned I = 1, Param = 0;
-    for (; I < Proto.size(); ++I, ++Param) {
-      if (Proto[I] == 'a' || Proto[I] == 'j' || Proto[I] == 'f' ||
-          Proto[I] == 'r' || Proto[I] == 'K' || Proto[I] == 'L' ||
-          Proto[I] == 'R' || Proto[I] == '@')
-        break;
-
-      // Multivector modifier can be skipped
-      if (Proto[I] == '.')
-        I += 2;
-    }
-    assert(I != Proto.size() && "Prototype has no splat operand");
-    return Param;
+    // These prototype modifiers are described in arm_sve.td.
+    auto Idx = Proto.find_first_of("ajfrKLR@");
+    assert(Idx != std::string::npos && Idx > 0 &&
+           "Prototype has no splat operand");
+    return Idx - 1;
   }
 
   /// Emits the intrinsic declaration to the ostream.
@@ -550,6 +540,15 @@ void SVEType::applyTypespec() {
 
 void SVEType::applyModifier(char Mod) {
   switch (Mod) {
+  case '2':
+    NumVectors = 2;
+    break;
+  case '3':
+    NumVectors = 3;
+    break;
+  case '4':
+    NumVectors = 4;
+    break;
   case 'v':
     Void = true;
     break;
@@ -852,13 +851,6 @@ void SVEType::applyModifier(char Mod) {
     NumVectors = 0;
     Signed = false;
     break;
-  case '$':
-    Predicate = false;
-    Svcount = false;
-    Float = false;
-    BFloat = true;
-    ElementBitwidth = 16;
-    break;
   case '}':
     Predicate = false;
     Signed = true;
@@ -867,36 +859,11 @@ void SVEType::applyModifier(char Mod) {
     Float = false;
     BFloat = false;
     break;
-  case '.':
-    llvm_unreachable(". is never a type in itself");
-    break;
   default:
     llvm_unreachable("Unhandled character!");
   }
 }
 
-/// Returns the modifier and number of vectors for the given operand \p Op.
-std::pair<char, unsigned> getProtoModifier(StringRef Proto, unsigned Op) {
-  for (unsigned P = 0; !Proto.empty(); ++P) {
-    unsigned NumVectors = 1;
-    unsigned CharsToSkip = 1;
-    char Mod = Proto[0];
-    if (Mod == '2' || Mod == '3' || Mod == '4') {
-      NumVectors = Mod - '0';
-      Mod = 'd';
-      if (Proto.size() > 1 && Proto[1] == '.') {
-        Mod = Proto[2];
-        CharsToSkip = 3;
-      }
-    }
-
-    if (P == Op)
-      return {Mod, NumVectors};
-
-    Proto = Proto.drop_front(CharsToSkip);
-  }
-  llvm_unreachable("Unexpected Op");
-}
 
 //===----------------------------------------------------------------------===//
 // Intrinsic implementation
@@ -912,11 +879,8 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
       MergeSuffix(MergeSuffix.str()), BaseType(BT, 'd'), Flags(Flags),
       ImmChecks(Checks.begin(), Checks.end()) {
   // Types[0] is the return value.
-  for (unsigned I = 0; I < (getNumParams() + 1); ++I) {
-    char Mod;
-    unsigned NumVectors;
-    std::tie(Mod, NumVectors) = getProtoModifier(Proto, I);
-    SVEType T(BaseTypeSpec, Mod, NumVectors);
+  for (unsigned I = 0; I < Proto.size(); ++I) {
+    SVEType T(BaseTypeSpec, Proto[I]);
     Types.push_back(T);
 
     // Add range checks for immediates
@@ -1160,11 +1124,10 @@ void SVEEmitter::createIntrinsic(
       assert(Arg >= 0 && Kind >= 0 && "Arg and Kind must be nonnegative");
 
       unsigned ElementSizeInBits = 0;
-      char Mod;
-      unsigned NumVectors;
-      std::tie(Mod, NumVectors) = getProtoModifier(Proto, EltSizeArg + 1);
       if (EltSizeArg >= 0)
-        ElementSizeInBits = SVEType(TS, Mod, NumVectors).getElementSizeInBits();
+        ElementSizeInBits =
+            SVEType(TS, Proto[EltSizeArg + /* offset by return arg */ 1])
+                .getElementSizeInBits();
       ImmChecks.push_back(ImmCheck(Arg, Kind, ElementSizeInBits));
     }
 
@@ -1222,7 +1185,7 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "typedef __SVUint64_t svuint64_t;\n";
   OS << "typedef __SVFloat16_t svfloat16_t;\n\n";
 
-  OS << "typedef __SVBfloat16_t svbfloat16_t;\n";
+  OS << "typedef __SVBFloat16_t svbfloat16_t;\n";
 
   OS << "#include <arm_bf16.h>\n";
 

@@ -125,18 +125,14 @@ RT_API_ATTRS int CFI_establish(CFI_cdesc_t *descriptor, void *base_addr,
 }
 
 RT_API_ATTRS int CFI_is_contiguous(const CFI_cdesc_t *descriptor) {
-  // See Descriptor::IsContiguous for the rationale.
-  bool stridesAreContiguous{true};
   CFI_index_t bytes = descriptor->elem_len;
   for (int j{0}; j < descriptor->rank; ++j) {
-    stridesAreContiguous &=
-        (bytes == descriptor->dim[j].sm) || (descriptor->dim[j].extent == 1);
+    if (bytes != descriptor->dim[j].sm) {
+      return 0;
+    }
     bytes *= descriptor->dim[j].extent;
   }
-  if (stridesAreContiguous || bytes == 0) {
-    return 1;
-  }
-  return 0;
+  return 1;
 }
 
 RT_API_ATTRS int CFI_section(CFI_cdesc_t *result, const CFI_cdesc_t *source,

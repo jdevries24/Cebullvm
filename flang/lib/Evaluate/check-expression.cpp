@@ -821,13 +821,8 @@ public:
     if (x.base().Rank() == 0) {
       return (*this)(x.GetLastSymbol());
     } else {
-      if (Result baseIsContiguous{(*this)(x.base())}) {
-        if (!*baseIsContiguous) {
-          return false;
-        }
-        // TODO could be true if base contiguous and this is only component, or
-        // if base has only one element?
-      }
+      // TODO could be true if base contiguous and this is only component, or
+      // if base has only one element?
       return std::nullopt;
     }
   }

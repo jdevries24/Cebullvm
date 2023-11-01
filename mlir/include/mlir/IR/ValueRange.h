@@ -158,9 +158,6 @@ public:
   /// Allow implicit conversion to an OperandRange.
   operator OperandRange() const;
 
-  /// Allow implicit conversion to a MutableArrayRef.
-  operator MutableArrayRef<OpOperand>() const;
-
   /// Returns the owning operation.
   Operation *getOwner() const { return owner; }
 

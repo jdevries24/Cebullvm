@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @transpose23
 // CHECK-SAME: %[[A:.*]]: vector<2x3xf32>
@@ -74,13 +74,11 @@ func.func @transpose1023_1x1x8x8xf32(%arg0: vector<1x1x8x8xf32>) -> vector<1x1x8
   return %0 : vector<1x1x8x8xf32>
 }
 
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
-    transform.apply_patterns to %func_op {
-      transform.apply_patterns.vector.lower_transpose lowering_strategy = "eltwise"
-    } : !transform.op<"func.func">
-    transform.yield
-  }
+transform.sequence failures(propagate) {
+^bb1(%func_op: !transform.op<"func.func">):
+  transform.apply_patterns to %func_op {
+    transform.apply_patterns.vector.lower_transpose lowering_strategy = "eltwise"
+  } : !transform.op<"func.func">
 }
 
 // -----
@@ -99,13 +97,11 @@ func.func @transpose(%arg0: vector<2x4xf32>) -> vector<4x2xf32> {
 }
 
 
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
-    transform.apply_patterns to %func_op {
-      transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_1d"
-    } : !transform.op<"func.func">
-    transform.yield
-  }
+transform.sequence failures(propagate) {
+^bb1(%func_op: !transform.op<"func.func">):
+  transform.apply_patterns to %func_op {
+    transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_1d"
+  } : !transform.op<"func.func">
 }
 
 // -----
@@ -120,13 +116,11 @@ func.func @transpose(%arg0: vector<2x4xf32>) -> vector<4x2xf32> {
 }
 
 
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
-    transform.apply_patterns to %func_op {
-      transform.apply_patterns.vector.lower_transpose lowering_strategy = "flat_transpose"
-    } : !transform.op<"func.func">
-    transform.yield
-  }
+transform.sequence failures(propagate) {
+^bb1(%func_op: !transform.op<"func.func">):
+  transform.apply_patterns to %func_op {
+    transform.apply_patterns.vector.lower_transpose lowering_strategy = "flat_transpose"
+  } : !transform.op<"func.func">
 }
 
 // -----
@@ -609,13 +603,11 @@ func.func @transpose210_1x8x8xf32(%arg0: vector<1x8x8xf32>) -> vector<8x8x1xf32>
   return %0 : vector<8x8x1xf32>
 }
 
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
-    transform.apply_patterns to %func_op {
-      transform.apply_patterns.vector.lower_transpose avx2_lowering_strategy = true
-    } : !transform.op<"func.func">
-    transform.yield
-  }
+transform.sequence failures(propagate) {
+^bb1(%func_op: !transform.op<"func.func">):
+  transform.apply_patterns to %func_op {
+    transform.apply_patterns.vector.lower_transpose avx2_lowering_strategy = true
+  } : !transform.op<"func.func">
 }
 
 // -----
@@ -689,13 +681,11 @@ func.func @transpose_shuffle16x16xf32(%arg0: vector<16x16xf32>) -> vector<16x16x
   return %0 : vector<16x16xf32>
 }
 
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
-    transform.apply_patterns to %func_op {
-      transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_16x16"
-    } : !transform.op<"func.func">
-    transform.yield
-  }
+transform.sequence failures(propagate) {
+^bb1(%func_op: !transform.op<"func.func">):
+  transform.apply_patterns to %func_op {
+    transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_16x16"
+  } : !transform.op<"func.func">
 }
 
 // -----
@@ -770,11 +760,9 @@ func.func @transpose021_shuffle16x16xf32(%arg0: vector<1x16x16xf32>) -> vector<1
   return %0 : vector<1x16x16xf32>
 }
 
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%func_op: !transform.op<"func.func"> {transform.readonly}) {
-    transform.apply_patterns to %func_op {
-      transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_16x16"
-    } : !transform.op<"func.func">
-    transform.yield
-  }
+transform.sequence failures(propagate) {
+^bb1(%func_op: !transform.op<"func.func">):
+  transform.apply_patterns to %func_op {
+    transform.apply_patterns.vector.lower_transpose lowering_strategy = "shuffle_16x16"
+  } : !transform.op<"func.func">
 }

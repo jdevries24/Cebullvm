@@ -991,7 +991,7 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
   }
 
   // Convert none token constants.
-  if (isa<llvm::ConstantTokenNone>(constant)) {
+  if (auto *noneToken = dyn_cast<llvm::ConstantTokenNone>(constant)) {
     return builder.create<NoneTokenOp>(loc).getResult();
   }
 

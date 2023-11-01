@@ -16,9 +16,11 @@
 #include <errno.h>
 #include <stdint.h>
 
-using LlvmLibcSinfTest = LIBC_NAMESPACE::testing::FPTest<float>;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
 
-TEST_F(LlvmLibcSinfTest, SpecialNumbers) {
+DECLARE_SPECIAL_CONSTANTS(float)
+
+TEST(LlvmLibcSinfTest, SpecialNumbers) {
   libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinf(aNaN));

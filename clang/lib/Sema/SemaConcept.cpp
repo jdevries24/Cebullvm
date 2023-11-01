@@ -657,11 +657,11 @@ Sema::SetupConstraintCheckingTemplateArgumentsAndScope(
   // Collect the list of template arguments relative to the 'primary' template.
   // We need the entire list, since the constraint is completely uninstantiated
   // at this point.
-  MLTAL = getTemplateInstantiationArgs(FD, FD->getLexicalDeclContext(),
-                                       /*Final=*/false, /*Innermost=*/nullptr,
-                                       /*RelativeToPrimary=*/true,
-                                       /*Pattern=*/nullptr,
-                                       /*ForConstraintInstantiation=*/true);
+  MLTAL =
+      getTemplateInstantiationArgs(FD, /*Final=*/false, /*Innermost=*/nullptr,
+                                   /*RelativeToPrimary=*/true,
+                                   /*Pattern=*/nullptr,
+                                   /*ForConstraintInstantiation=*/true);
   if (SetupConstraintScope(FD, TemplateArgs, MLTAL, Scope))
     return std::nullopt;
 
@@ -736,8 +736,7 @@ static unsigned
 CalculateTemplateDepthForConstraints(Sema &S, const NamedDecl *ND,
                                      bool SkipForSpecialization = false) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      ND, ND->getLexicalDeclContext(), /*Final=*/false, /*Innermost=*/nullptr,
-      /*RelativeToPrimary=*/true,
+      ND, /*Final=*/false, /*Innermost=*/nullptr, /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr,
       /*ForConstraintInstantiation=*/true, SkipForSpecialization);
   return MLTAL.getNumLevels();
@@ -771,31 +770,28 @@ namespace {
   };
 } // namespace
 
-static const Expr *
-SubstituteConstraintExpression(Sema &S,
-                               const Sema::TemplateCompareNewDeclInfo &DeclInfo,
-                               const Expr *ConstrExpr) {
+static const Expr *SubstituteConstraintExpression(Sema &S, const NamedDecl *ND,
+                                                  const Expr *ConstrExpr) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      DeclInfo.getDecl(), DeclInfo.getLexicalDeclContext(), /*Final=*/false,
-      /*Innermost=*/nullptr,
+      ND, /*Final=*/false, /*Innermost=*/nullptr,
       /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr, /*ForConstraintInstantiation=*/true,
       /*SkipForSpecialization*/ false);
-
   if (MLTAL.getNumSubstitutedLevels() == 0)
     return ConstrExpr;
 
   Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/false);
 
   Sema::InstantiatingTemplate Inst(
-      S, DeclInfo.getLocation(),
+      S, ND->getLocation(),
       Sema::InstantiatingTemplate::ConstraintNormalization{},
-      const_cast<NamedDecl *>(DeclInfo.getDecl()), SourceRange{});
+      const_cast<NamedDecl *>(ND), SourceRange{});
+
   if (Inst.isInvalid())
     return nullptr;
 
   std::optional<Sema::CXXThisScopeRAII> ThisScope;
-  if (auto *RD = dyn_cast<CXXRecordDecl>(DeclInfo.getDeclContext()))
+  if (auto *RD = dyn_cast<CXXRecordDecl>(ND->getDeclContext()))
     ThisScope.emplace(S, const_cast<CXXRecordDecl *>(RD), Qualifiers());
   ExprResult SubstConstr =
       S.SubstConstraintExpr(const_cast<clang::Expr *>(ConstrExpr), MLTAL);
@@ -806,13 +802,13 @@ SubstituteConstraintExpression(Sema &S,
 
 bool Sema::AreConstraintExpressionsEqual(const NamedDecl *Old,
                                          const Expr *OldConstr,
-                                         const TemplateCompareNewDeclInfo &New,
+                                         const NamedDecl *New,
                                          const Expr *NewConstr) {
   if (OldConstr == NewConstr)
     return true;
   // C++ [temp.constr.decl]p4
-  if (Old && !New.isInvalid() && !New.ContainsDecl(Old) &&
-      Old->getLexicalDeclContext() != New.getLexicalDeclContext()) {
+  if (Old && New && Old != New &&
+      Old->getLexicalDeclContext() != New->getLexicalDeclContext()) {
     if (const Expr *SubstConstr =
             SubstituteConstraintExpression(*this, Old, OldConstr))
       OldConstr = SubstConstr;
@@ -1256,8 +1252,7 @@ static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N,
   TemplateArgumentList TAL{TemplateArgumentList::OnStack,
                            CSE->getTemplateArguments()};
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      CSE->getNamedConcept(), CSE->getNamedConcept()->getLexicalDeclContext(),
-      /*Final=*/false, &TAL,
+      CSE->getNamedConcept(), /*Final=*/false, &TAL,
       /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr,
       /*ForConstraintInstantiation=*/true);

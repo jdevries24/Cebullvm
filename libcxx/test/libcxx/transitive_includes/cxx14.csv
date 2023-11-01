@@ -111,7 +111,6 @@ charconv iosfwd
 charconv limits
 charconv new
 charconv type_traits
-charconv version
 chrono bit
 chrono compare
 chrono concepts
@@ -533,7 +532,6 @@ mdspan concepts
 mdspan cstddef
 mdspan limits
 mdspan span
-mdspan version
 memory atomic
 memory compare
 memory concepts

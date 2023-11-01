@@ -2897,12 +2897,6 @@ public:
   static bool classofKind(Kind K) { return K == CXXConversion; }
 };
 
-/// Represents the language in a linkage specification.
-///
-/// The values are part of the serialization ABI for
-/// ASTs and cannot be changed without altering that ABI.
-enum class LinkageSpecLanguageIDs { C = 1, CXX = 2 };
-
 /// Represents a linkage specification.
 ///
 /// For example:
@@ -2913,7 +2907,14 @@ class LinkageSpecDecl : public Decl, public DeclContext {
   virtual void anchor();
   // This class stores some data in DeclContext::LinkageSpecDeclBits to save
   // some space. Use the provided accessors to access it.
+public:
+  /// Represents the language in a linkage specification.
+  ///
+  /// The values are part of the serialization ABI for
+  /// ASTs and cannot be changed without altering that ABI.
+  enum LanguageIDs { lang_c = 1, lang_cxx = 2 };
 
+private:
   /// The source location for the extern keyword.
   SourceLocation ExternLoc;
 
@@ -2921,25 +2922,22 @@ class LinkageSpecDecl : public Decl, public DeclContext {
   SourceLocation RBraceLoc;
 
   LinkageSpecDecl(DeclContext *DC, SourceLocation ExternLoc,
-                  SourceLocation LangLoc, LinkageSpecLanguageIDs lang,
-                  bool HasBraces);
+                  SourceLocation LangLoc, LanguageIDs lang, bool HasBraces);
 
 public:
   static LinkageSpecDecl *Create(ASTContext &C, DeclContext *DC,
                                  SourceLocation ExternLoc,
-                                 SourceLocation LangLoc,
-                                 LinkageSpecLanguageIDs Lang, bool HasBraces);
+                                 SourceLocation LangLoc, LanguageIDs Lang,
+                                 bool HasBraces);
   static LinkageSpecDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
   /// Return the language specified by this linkage specification.
-  LinkageSpecLanguageIDs getLanguage() const {
-    return static_cast<LinkageSpecLanguageIDs>(LinkageSpecDeclBits.Language);
+  LanguageIDs getLanguage() const {
+    return static_cast<LanguageIDs>(LinkageSpecDeclBits.Language);
   }
 
   /// Set the language specified by this linkage specification.
-  void setLanguage(LinkageSpecLanguageIDs L) {
-    LinkageSpecDeclBits.Language = llvm::to_underlying(L);
-  }
+  void setLanguage(LanguageIDs L) { LinkageSpecDeclBits.Language = L; }
 
   /// Determines whether this linkage specification had braces in
   /// its syntactic form.

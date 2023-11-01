@@ -63,10 +63,6 @@ public:
   unsigned isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
                               unsigned &MemBytes) const override;
 
-  void copyPhysRegVector(MachineBasicBlock &MBB,
-                         MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
-                         MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
-                         unsigned Opc, unsigned NF = 1) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                    const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg,
                    bool KillSrc) const override;
@@ -95,8 +91,7 @@ public:
   // Materializes the given integer Val into DstReg.
   void movImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
               const DebugLoc &DL, Register DstReg, uint64_t Val,
-              MachineInstr::MIFlag Flag = MachineInstr::NoFlags,
-              bool DstRenamable = false, bool DstIsDead = false) const;
+              MachineInstr::MIFlag Flag = MachineInstr::NoFlags) const;
 
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
@@ -282,9 +277,6 @@ bool hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2);
 // returns null.
 std::optional<unsigned> getVectorLowDemandedScalarBits(uint16_t Opcode,
                                                        unsigned Log2SEW);
-
-// Returns the MC opcode of RVV pseudo instruction.
-unsigned getRVVMCOpcode(unsigned RVVPseudoOpcode);
 
 // Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
 static constexpr int64_t VLMaxSentinel = -1LL;

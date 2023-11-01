@@ -1903,8 +1903,7 @@ static Error runChecks(Session &S, Triple TT, SubtargetFeatures Features) {
 
   RuntimeDyldChecker Checker(
       IsSymbolValid, GetSymbolInfo, GetSectionInfo, GetStubInfo, GetGOTInfo,
-      S.ES.getTargetTriple().isLittleEndian() ? llvm::endianness::little
-                                              : llvm::endianness::big,
+      S.ES.getTargetTriple().isLittleEndian() ? support::little : support::big,
       TT, StringRef(), Features, dbgs());
 
   std::string CheckLineStart = "# " + CheckName + ":";

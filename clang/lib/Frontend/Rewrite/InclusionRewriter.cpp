@@ -444,11 +444,8 @@ void InclusionRewriter::Process(FileID FileId,
               if (Mod)
                 OS << "#pragma clang module end /*"
                    << Mod->getFullModuleName(true) << "*/\n";
-              // There's no #include, therefore no #if, for -include files.
-              if (FromFile != PredefinesBuffer) {
-                OS << "#endif /* " << getIncludedFileName(Inc)
-                   << " expanded by -frewrite-includes */" << LocalEOL;
-              }
+              OS << "#endif /* " << getIncludedFileName(Inc)
+                 << " expanded by -frewrite-includes */" << LocalEOL;
 
               // Add line marker to indicate we're returning from an included
               // file.

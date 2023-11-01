@@ -23,7 +23,6 @@
 #include <utility>
 #include <vector>
 
-#include "make_test_thread.h"
 #include "test_macros.h"
 
 static_assert(std::is_nothrow_move_assignable_v<std::jthread>);
@@ -31,10 +30,10 @@ static_assert(std::is_nothrow_move_assignable_v<std::jthread>);
 int main(int, char**) {
   // If &x == this is true, there are no effects.
   {
-    std::jthread j = support::make_test_jthread([] {});
-    auto id        = j.get_id();
-    auto ssource   = j.get_stop_source();
-    j              = std::move(j);
+    std::jthread j([] {});
+    auto id      = j.get_id();
+    auto ssource = j.get_stop_source();
+    j            = std::move(j);
     assert(j.get_id() == id);
     assert(j.get_stop_source() == ssource);
   }
@@ -42,12 +41,12 @@ int main(int, char**) {
   // if joinable() is true, calls request_stop() and then join()
   // request_stop is called
   {
-    std::jthread j1 = support::make_test_jthread([] {});
-    bool called     = false;
+    std::jthread j1([] {});
+    bool called = false;
     std::stop_callback cb(j1.get_stop_token(), [&called] { called = true; });
 
-    std::jthread j2 = support::make_test_jthread([] {});
-    j1              = std::move(j2);
+    std::jthread j2([] {});
+    j1 = std::move(j2);
     assert(called);
   }
 
@@ -59,10 +58,10 @@ int main(int, char**) {
     constexpr auto numberOfThreads = 10u;
     jts.reserve(numberOfThreads);
     for (auto i = 0u; i < numberOfThreads; ++i) {
-      jts.emplace_back(support::make_test_jthread([&] {
+      jts.emplace_back([&] {
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
         calledTimes.fetch_add(1, std::memory_order_relaxed);
-      }));
+      });
     }
 
     for (auto i = 0u; i < numberOfThreads; ++i) {
@@ -80,10 +79,10 @@ int main(int, char**) {
 
   // then assigns the state of x to *this
   {
-    std::jthread j1 = support::make_test_jthread([] {});
-    std::jthread j2 = support::make_test_jthread([] {});
-    auto id2        = j2.get_id();
-    auto ssource2   = j2.get_stop_source();
+    std::jthread j1([] {});
+    std::jthread j2([] {});
+    auto id2      = j2.get_id();
+    auto ssource2 = j2.get_stop_source();
 
     j1 = std::move(j2);
 
@@ -93,9 +92,9 @@ int main(int, char**) {
 
   // sets x to a default constructed state
   {
-    std::jthread j1 = support::make_test_jthread([] {});
-    std::jthread j2 = support::make_test_jthread([] {});
-    j1              = std::move(j2);
+    std::jthread j1([] {});
+    std::jthread j2([] {});
+    j1 = std::move(j2);
 
     assert(j2.get_id() == std::jthread::id());
     assert(!j2.get_stop_source().stop_possible());
@@ -104,7 +103,7 @@ int main(int, char**) {
   // joinable is false
   {
     std::jthread j1;
-    std::jthread j2 = support::make_test_jthread([] {});
+    std::jthread j2([] {});
 
     auto j2Id = j2.get_id();
 

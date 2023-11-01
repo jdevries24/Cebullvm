@@ -11,7 +11,6 @@ add_mlir_dialect_library(MLIRVectorDialect
   MLIRVectorAttributesIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffineDialect
   MLIRArithDialect
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
@@ -23,6 +22,5 @@ add_mlir_dialect_library(MLIRVectorDialect
   MLIRMemRefDialect
   MLIRSideEffectInterfaces
   MLIRTensorDialect
-  MLIRValueBoundsOpInterface
   MLIRVectorInterfaces
   )

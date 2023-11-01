@@ -258,7 +258,7 @@ struct TestLinalgElementwiseFusion
       SmallVector<int64_t, 2> dims(collapseDimensions.begin(),
                                    collapseDimensions.end());
       linalg::GetCollapsableDimensionsFn collapseFn =
-          [&dims](linalg::LinalgOp op) {
+          [&dims](linalg::GenericOp op) {
             SmallVector<ReassociationIndices> reassociations;
             reassociations.emplace_back(dims);
             return reassociations;

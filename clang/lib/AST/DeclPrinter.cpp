@@ -1194,10 +1194,10 @@ void DeclPrinter::VisitCXXRecordDecl(CXXRecordDecl *D) {
 
 void DeclPrinter::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
   const char *l;
-  if (D->getLanguage() == LinkageSpecLanguageIDs::C)
+  if (D->getLanguage() == LinkageSpecDecl::lang_c)
     l = "C";
   else {
-    assert(D->getLanguage() == LinkageSpecLanguageIDs::CXX &&
+    assert(D->getLanguage() == LinkageSpecDecl::lang_cxx &&
            "unknown language in linkage specification");
     l = "C++";
   }
@@ -1866,17 +1866,17 @@ void DeclPrinter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
     if (auto *Init = D->getInitializer()) {
       Out << " initializer(";
       switch (D->getInitializerKind()) {
-      case OMPDeclareReductionInitKind::Direct:
+      case OMPDeclareReductionDecl::DirectInit:
         Out << "omp_priv(";
         break;
-      case OMPDeclareReductionInitKind::Copy:
+      case OMPDeclareReductionDecl::CopyInit:
         Out << "omp_priv = ";
         break;
-      case OMPDeclareReductionInitKind::Call:
+      case OMPDeclareReductionDecl::CallInit:
         break;
       }
       Init->printPretty(Out, nullptr, Policy, 0, "\n", &Context);
-      if (D->getInitializerKind() == OMPDeclareReductionInitKind::Direct)
+      if (D->getInitializerKind() == OMPDeclareReductionDecl::DirectInit)
         Out << ")";
       Out << ")";
     }

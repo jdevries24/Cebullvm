@@ -35,7 +35,6 @@
 #include <optional>
 #include <string>
 #include <utility>
-#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -163,7 +162,7 @@ public:
   std::string PresumedModuleMapFile;
 
   /// The umbrella header or directory.
-  std::variant<std::monostate, FileEntryRef, DirectoryEntryRef> Umbrella;
+  llvm::PointerUnion<FileEntryRef, DirectoryEntryRef> Umbrella;
 
   /// The module signature.
   ASTFileSignature Signature;
@@ -666,17 +665,18 @@ public:
 
   /// Retrieve the umbrella directory as written.
   std::optional<DirectoryName> getUmbrellaDirAsWritten() const {
-    if (const auto *Dir = std::get_if<DirectoryEntryRef>(&Umbrella))
+    if (Umbrella && Umbrella.is<DirectoryEntryRef>())
       return DirectoryName{UmbrellaAsWritten,
-                           UmbrellaRelativeToRootModuleDirectory, *Dir};
+                           UmbrellaRelativeToRootModuleDirectory,
+                           Umbrella.get<DirectoryEntryRef>()};
     return std::nullopt;
   }
 
   /// Retrieve the umbrella header as written.
   std::optional<Header> getUmbrellaHeaderAsWritten() const {
-    if (const auto *Hdr = std::get_if<FileEntryRef>(&Umbrella))
+    if (Umbrella && Umbrella.is<FileEntryRef>())
       return Header{UmbrellaAsWritten, UmbrellaRelativeToRootModuleDirectory,
-                    *Hdr};
+                    Umbrella.get<FileEntryRef>()};
     return std::nullopt;
   }
 

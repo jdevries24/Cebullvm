@@ -93,9 +93,8 @@ void SparcMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                            const MCSubtargetInfo &STI) const {
   unsigned Bits = getBinaryCodeForInstr(MI, Fixups, STI);
   support::endian::write(CB, Bits,
-                         Ctx.getAsmInfo()->isLittleEndian()
-                             ? llvm::endianness::little
-                             : llvm::endianness::big);
+                         Ctx.getAsmInfo()->isLittleEndian() ? support::little
+                                                            : support::big);
 
   // Some instructions have phantom operands that only contribute a fixup entry.
   unsigned SymOpNo = 0;

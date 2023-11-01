@@ -1106,7 +1106,9 @@ void CodeGenFunction::EmitNewArrayInitializer(
       // element.  TODO: some of these stores can be trivially
       // observed to be unnecessary.
       if (EndOfInit.isValid()) {
-        Builder.CreateStore(CurPtr.getPointer(), EndOfInit);
+        auto FinishedPtr =
+          Builder.CreateBitCast(CurPtr.getPointer(), BeginPtr.getType());
+        Builder.CreateStore(FinishedPtr, EndOfInit);
       }
       // FIXME: If the last initializer is an incomplete initializer list for
       // an array, and we have an array filler, we can fold together the two

@@ -33,11 +33,11 @@ MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
   auto TW = createObjectTargetWriter();
   switch (TW->getFormat()) {
   case Triple::ELF:
-    return createELFObjectWriter(cast<MCELFObjectTargetWriter>(std::move(TW)),
-                                 OS, Endian == llvm::endianness::little);
+    return createELFObjectWriter(cast<MCELFObjectTargetWriter>(std::move(TW)), OS,
+                                 Endian == support::little);
   case Triple::MachO:
     return createMachObjectWriter(cast<MCMachObjectTargetWriter>(std::move(TW)),
-                                  OS, Endian == llvm::endianness::little);
+                                  OS, Endian == support::little);
   case Triple::COFF:
     return createWinCOFFObjectWriter(
         cast<MCWinCOFFObjectTargetWriter>(std::move(TW)), OS);
@@ -72,7 +72,7 @@ MCAsmBackend::createDwoObjectWriter(raw_pwrite_stream &OS,
   case Triple::ELF:
     return createELFDwoObjectWriter(
         cast<MCELFObjectTargetWriter>(std::move(TW)), OS, DwoOS,
-        Endian == llvm::endianness::little);
+        Endian == support::little);
   case Triple::Wasm:
     return createWasmDwoObjectWriter(
         cast<MCWasmObjectTargetWriter>(std::move(TW)), OS, DwoOS);

@@ -181,13 +181,15 @@ void DataAggregator::start() {
                     "script -F pid,event,addr,ip",
                     /*Wait = */false);
 
-  launchPerfProcess("process events", MMapEventsPPI,
-                    "script --show-mmap-events --no-itrace",
-                    /*Wait = */ false);
+  launchPerfProcess("process events",
+                    MMapEventsPPI,
+                    "script --show-mmap-events",
+                    /*Wait = */false);
 
-  launchPerfProcess("task events", TaskEventsPPI,
-                    "script --show-task-events --no-itrace",
-                    /*Wait = */ false);
+  launchPerfProcess("task events",
+                    TaskEventsPPI,
+                    "script --show-task-events",
+                    /*Wait = */false);
 }
 
 void DataAggregator::abort() {

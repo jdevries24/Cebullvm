@@ -199,10 +199,6 @@ static llvm::cl::opt<bool> enableCUDA("fcuda",
                                       llvm::cl::desc("enable CUDA Fortran"),
                                       llvm::cl::init(false));
 
-static llvm::cl::opt<bool> fixedForm("ffixed-form",
-                                     llvm::cl::desc("enable fixed form"),
-                                     llvm::cl::init(false));
-
 #define FLANG_EXCLUDE_CODEGEN
 #include "flang/Tools/CLOptions.inc"
 
@@ -435,10 +431,6 @@ int main(int argc, char **argv) {
   // enable parsing of CUDA Fortran
   if (enableCUDA) {
     options.features.Enable(Fortran::common::LanguageFeature::CUDA);
-  }
-
-  if (fixedForm) {
-    options.isFixedForm = fixedForm;
   }
 
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;

@@ -42,7 +42,6 @@ unittest("ADTTests") {
     "FunctionRefTest.cpp",
     "HashingTest.cpp",
     "IListBaseTest.cpp",
-    "IListIteratorBitsTest.cpp",
     "IListIteratorTest.cpp",
     "IListNodeBaseTest.cpp",
     "IListNodeTest.cpp",

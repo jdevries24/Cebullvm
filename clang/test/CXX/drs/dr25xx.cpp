@@ -85,12 +85,17 @@ using ::dr2521::operator""_div;
 #if __cplusplus >= 202302L
 namespace dr2553 { // dr2553: 18
 struct B {
-  virtual void f(this B&);   // expected-error {{an explicit object parameter cannot appear in a virtual function}}
+  virtual void f(this B&);   // expected-error {{an explicit object parameter cannot appear in a virtual function}} \
+                             // expected-note {{here}}
   static void f(this B&);   // expected-error {{an explicit object parameter cannot appear in a static function}}
   virtual void g(); // expected-note {{here}}
 };
 struct D : B {
   void g(this D&); // expected-error {{an explicit object parameter cannot appear in a virtual function}}
+};
+
+struct D2 : B {
+  void f(this B&); // expected-error {{an explicit object parameter cannot appear in a virtual function}}
 };
 
 }

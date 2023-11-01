@@ -50,8 +50,9 @@ struct TestSCFForUtilsPass
         auto newInitValues = forOp.getInitArgs();
         if (newInitValues.empty())
           return;
-        SmallVector<Value> oldYieldValues =
-            llvm::to_vector(forOp.getYieldedValues());
+        auto yieldOp = cast<scf::YieldOp>(forOp.getBody()->getTerminator());
+        SmallVector<Value> oldYieldValues(yieldOp.getResults().begin(),
+                                          yieldOp.getResults().end());
         NewYieldValuesFn fn = [&](OpBuilder &b, Location loc,
                                   ArrayRef<BlockArgument> newBBArgs) {
           SmallVector<Value> newYieldValues;

@@ -1980,16 +1980,35 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV, bool ProcessingGeneric) 
   }
 
   switch (CE->getOpcode()) {
-  default:
-    break; // Error
+  default: {
+    // If the code isn't optimized, there may be outstanding folding
+    // opportunities. Attempt to fold the expression using DataLayout as a
+    // last resort before giving up.
+    Constant *C = ConstantFoldConstant(CE, getDataLayout());
+    if (C != CE)
+      return lowerConstantForGV(C, ProcessingGeneric);
+
+    // Otherwise report the problem to the user.
+    std::string S;
+    raw_string_ostream OS(S);
+    OS << "Unsupported expression in static initializer: ";
+    CE->printAsOperand(OS, /*PrintType=*/false,
+                   !MF ? nullptr : MF->getFunction().getParent());
+    report_fatal_error(Twine(OS.str()));
+  }
 
   case Instruction::AddrSpaceCast: {
     // Strip the addrspacecast and pass along the operand
     PointerType *DstTy = cast<PointerType>(CE->getType());
-    if (DstTy->getAddressSpace() == 0)
+    if (DstTy->getAddressSpace() == 0) {
       return lowerConstantForGV(cast<const Constant>(CE->getOperand(0)), true);
-
-    break; // Error
+    }
+    std::string S;
+    raw_string_ostream OS(S);
+    OS << "Unsupported expression in static initializer: ";
+    CE->printAsOperand(OS, /*PrintType=*/ false,
+                       !MF ? nullptr : MF->getFunction().getParent());
+    report_fatal_error(Twine(OS.str()));
   }
 
   case Instruction::GetElementPtr: {
@@ -2024,12 +2043,9 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV, bool ProcessingGeneric) 
     // Handle casts to pointers by changing them into casts to the appropriate
     // integer type.  This promotes constant folding and simplifies this code.
     Constant *Op = CE->getOperand(0);
-    Op = ConstantFoldIntegerCast(Op, DL.getIntPtrType(CV->getType()),
-                                 /*IsSigned*/ false, DL);
-    if (Op)
-      return lowerConstantForGV(Op, ProcessingGeneric);
-
-    break; // Error
+    Op = ConstantExpr::getIntegerCast(Op, DL.getIntPtrType(CV->getType()),
+                                      false/*ZExt*/);
+    return lowerConstantForGV(Op, ProcessingGeneric);
   }
 
   case Instruction::PtrToInt: {
@@ -2066,21 +2082,6 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV, bool ProcessingGeneric) 
     }
   }
   }
-
-  // If the code isn't optimized, there may be outstanding folding
-  // opportunities. Attempt to fold the expression using DataLayout as a
-  // last resort before giving up.
-  Constant *C = ConstantFoldConstant(CE, getDataLayout());
-  if (C != CE)
-    return lowerConstantForGV(C, ProcessingGeneric);
-
-  // Otherwise report the problem to the user.
-  std::string S;
-  raw_string_ostream OS(S);
-  OS << "Unsupported expression in static initializer: ";
-  CE->printAsOperand(OS, /*PrintType=*/false,
-                 !MF ? nullptr : MF->getFunction().getParent());
-  report_fatal_error(Twine(OS.str()));
 }
 
 // Copy of MCExpr::print customized for NVPTX

@@ -23,7 +23,6 @@
 #include <thread>
 #include <type_traits>
 
-#include "make_test_thread.h"
 #include "test_macros.h"
 
 int main(int, char**) {
@@ -31,10 +30,10 @@ int main(int, char**) {
   {
     std::atomic_bool start{false};
     std::atomic_bool done{false};
-    std::optional<std::jthread> jt = support::make_test_jthread([&start, &done] {
+    std::optional<std::jthread> jt{[&start, &done] {
       start.wait(false);
       done = true;
-    });
+    }};
 
     // If it blocks, it will deadlock here
     jt->detach();
@@ -50,7 +49,7 @@ int main(int, char**) {
 
   // Postconditions: get_id() == id().
   {
-    std::jthread jt = support::make_test_jthread([] {});
+    std::jthread jt{[] {}};
     assert(jt.get_id() != std::jthread::id());
     jt.detach();
     assert(jt.get_id() == std::jthread::id());

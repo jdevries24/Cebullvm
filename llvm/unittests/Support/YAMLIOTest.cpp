@@ -2392,7 +2392,6 @@ TEST(YAMLIO, TestMalformedMapFailsGracefully) {
 
 struct OptionalTest {
   std::vector<int> Numbers;
-  std::optional<int> MaybeNumber;
 };
 
 struct OptionalTestSeq {
@@ -2406,7 +2405,6 @@ namespace yaml {
   struct MappingTraits<OptionalTest> {
     static void mapping(IO& IO, OptionalTest &OT) {
       IO.mapOptional("Numbers", OT.Numbers);
-      IO.mapOptional("MaybeNumber", OT.MaybeNumber);
     }
   };
 
@@ -2468,7 +2466,6 @@ TEST(YAMLIO, TestEmptyStringSucceedsForMapWithOptionalFields) {
   Input yin("");
   yin >> doc;
   EXPECT_FALSE(yin.error());
-  EXPECT_FALSE(doc.MaybeNumber.has_value());
 }
 
 TEST(YAMLIO, TestEmptyStringSucceedsForSequence) {
@@ -3156,7 +3153,7 @@ TEST(YAMLIO, TestFlowSequenceTokenErrors) {
 
 TEST(YAMLIO, TestDirectiveMappingNoValue) {
   Input yin("%YAML\n{5:");
-  yin.setCurrentDocument();
+  EXPECT_FALSE(yin.setCurrentDocument());
   EXPECT_TRUE(yin.error());
 
   Input yin2("%TAG\n'\x98!< :\n");

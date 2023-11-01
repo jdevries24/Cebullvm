@@ -845,7 +845,7 @@ ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
   RD->setHasNonTrivialToPrimitiveDestructCUnion(Record.readInt());
   RD->setHasNonTrivialToPrimitiveCopyCUnion(Record.readInt());
   RD->setParamDestroyedInCallee(Record.readInt());
-  RD->setArgPassingRestrictions((RecordArgPassingKind)Record.readInt());
+  RD->setArgPassingRestrictions((RecordDecl::ArgPassingKind)Record.readInt());
   return Redecl;
 }
 
@@ -1151,8 +1151,7 @@ void ASTDeclReader::VisitObjCMethodDecl(ObjCMethodDecl *MD) {
     Reader.getContext().setObjCMethodRedeclaration(MD,
                                        readDeclAs<ObjCMethodDecl>());
 
-  MD->setDeclImplementation(
-      static_cast<ObjCImplementationControl>(Record.readInt()));
+  MD->setDeclImplementation((ObjCMethodDecl::ImplementationControl)Record.readInt());
   MD->setObjCDeclQualifier((Decl::ObjCDeclQualifier)Record.readInt());
   MD->setRelatedResultType(Record.readInt());
   MD->setReturnType(Record.readType());
@@ -1773,7 +1772,7 @@ void ASTDeclReader::VisitCapturedDecl(CapturedDecl *CD) {
 
 void ASTDeclReader::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
   VisitDecl(D);
-  D->setLanguage(static_cast<LinkageSpecLanguageIDs>(Record.readInt()));
+  D->setLanguage((LinkageSpecDecl::LanguageIDs)Record.readInt());
   D->setExternLoc(readSourceLocation());
   D->setRBraceLoc(readSourceLocation());
 }
@@ -3006,7 +3005,7 @@ void ASTDeclReader::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
   Expr *Priv = Record.readExpr();
   D->setInitializerData(Orig, Priv);
   Expr *Init = Record.readExpr();
-  auto IK = static_cast<OMPDeclareReductionInitKind>(Record.readInt());
+  auto IK = static_cast<OMPDeclareReductionDecl::InitKind>(Record.readInt());
   D->setInitializer(Init, IK);
   D->PrevDeclInScope = readDeclID();
 }
@@ -4514,7 +4513,7 @@ void ASTDeclReader::UpdateDecl(Decl *D,
                     !Reader.PendingFakeDefinitionData.count(OldDD));
       RD->setParamDestroyedInCallee(Record.readInt());
       RD->setArgPassingRestrictions(
-          static_cast<RecordArgPassingKind>(Record.readInt()));
+          (RecordDecl::ArgPassingKind)Record.readInt());
       ReadCXXRecordDefinition(RD, /*Update*/true);
 
       // Visible update is handled separately.

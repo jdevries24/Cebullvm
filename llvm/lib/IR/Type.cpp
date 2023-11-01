@@ -841,8 +841,7 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
 
   // Opaque types in the AArch64 name space.
   if (Name == "aarch64.svcount")
-    return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16),
-                          TargetExtType::HasZeroInit);
+    return TargetTypeInfo(ScalableVectorType::get(Type::getInt1Ty(C), 16));
 
   return TargetTypeInfo(Type::getVoidTy(C));
 }

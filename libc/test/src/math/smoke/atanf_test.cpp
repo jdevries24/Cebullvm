@@ -16,9 +16,11 @@
 #include <errno.h>
 #include <stdint.h>
 
-using LlvmLibcAtanfTest = LIBC_NAMESPACE::testing::FPTest<float>;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
 
-TEST_F(LlvmLibcAtanfTest, SpecialNumbers) {
+DECLARE_SPECIAL_CONSTANTS(float)
+
+TEST(LlvmLibcAtanfTest, SpecialNumbers) {
   libc_errno = 0;
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);

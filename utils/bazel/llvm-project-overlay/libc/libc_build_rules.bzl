@@ -4,8 +4,8 @@
 
 """LLVM libc starlark rules for building individual functions."""
 
-load("@bazel_skylib//lib:selects.bzl", "selects")
 load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
+load("@bazel_skylib//lib:selects.bzl", "selects")
 
 LIBC_ROOT_TARGET = ":libc_root"
 INTERNAL_SUFFIX = ".__internal__"

@@ -19,11 +19,13 @@
 
 #include <initializer_list>
 
-using LlvmLibcAtanfTest = LIBC_NAMESPACE::testing::FPTest<float>;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-TEST_F(LlvmLibcAtanfTest, SpecialNumbers) {
+DECLARE_SPECIAL_CONSTANTS(float)
+
+TEST(LlvmLibcAtanfTest, SpecialNumbers) {
   libc_errno = 0;
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanf(aNaN));
@@ -41,7 +43,7 @@ TEST_F(LlvmLibcAtanfTest, SpecialNumbers) {
   EXPECT_MATH_ERRNO(0);
 }
 
-TEST_F(LlvmLibcAtanfTest, InFloatRange) {
+TEST(LlvmLibcAtanfTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   const uint32_t STEP = FPBits(inf).uintval() / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
@@ -54,7 +56,7 @@ TEST_F(LlvmLibcAtanfTest, InFloatRange) {
 }
 
 // For small values, tanh(x) is x.
-TEST_F(LlvmLibcAtanfTest, SpecialValues) {
+TEST(LlvmLibcAtanfTest, SpecialValues) {
   for (uint32_t v : {0x3d8d6b23U, 0x3feefcfbU, 0xbd8d6b23U, 0xbfeefcfbU,
                      0x7F800000U, 0xFF800000U}) {
     float x = float(FPBits(v));

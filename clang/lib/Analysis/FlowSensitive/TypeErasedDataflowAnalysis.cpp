@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <algorithm>
+#include <memory>
 #include <optional>
 #include <system_error>
 #include <utility>
@@ -32,8 +33,8 @@
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 
@@ -52,14 +53,19 @@ static int blockIndexInPredecessor(const CFGBlock &Pred,
   return BlockPos - Pred.succ_begin();
 }
 
-// A "backedge" node is a block introduced in the CFG exclusively to indicate a
-// loop backedge. They are exactly identified by the presence of a non-null
-// pointer to the entry block of the loop condition. Note that this is not
-// necessarily the block with the loop statement as terminator, because
-// short-circuit operators will result in multiple blocks encoding the loop
-// condition, only one of which will contain the loop statement as terminator.
-static bool isBackedgeNode(const CFGBlock &B) {
-  return B.getLoopTarget() != nullptr;
+static bool isLoopHead(const CFGBlock &B) {
+  if (const auto *T = B.getTerminatorStmt())
+    switch (T->getStmtClass()) {
+      case Stmt::WhileStmtClass:
+      case Stmt::DoStmtClass:
+      case Stmt::ForStmtClass:
+      case Stmt::CXXForRangeStmtClass:
+        return true;
+      default:
+        return false;
+    }
+
+  return false;
 }
 
 namespace {
@@ -148,7 +154,7 @@ private:
       ConditionValue = false;
     }
 
-    Env.assume(Val->formula());
+    Env.addToFlowCondition(Val->formula());
     return {&Cond, ConditionValue};
   }
 
@@ -307,7 +313,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
       auto &StmtToBlock = AC.CFCtx.getStmtToBlock();
       auto StmtBlock = StmtToBlock.find(Block.getTerminatorStmt());
       assert(StmtBlock != StmtToBlock.end());
-      llvm::erase(Preds, StmtBlock->getSecond());
+      llvm::erase_value(Preds, StmtBlock->getSecond());
     }
   }
 
@@ -496,15 +502,14 @@ runTypeErasedDataflowAnalysis(
         PostVisitCFG) {
   PrettyStackTraceAnalysis CrashInfo(CFCtx, "runTypeErasedDataflowAnalysis");
 
-  const clang::CFG &CFG = CFCtx.getCFG();
-  PostOrderCFGView POV(&CFG);
-  ForwardDataflowWorklist Worklist(CFG, &POV);
+  PostOrderCFGView POV(&CFCtx.getCFG());
+  ForwardDataflowWorklist Worklist(CFCtx.getCFG(), &POV);
 
   std::vector<std::optional<TypeErasedDataflowAnalysisState>> BlockStates(
-      CFG.size());
+      CFCtx.getCFG().size());
 
   // The entry basic block doesn't contain statements so it can be skipped.
-  const CFGBlock &Entry = CFG.getEntry();
+  const CFGBlock &Entry = CFCtx.getCFG().getEntry();
   BlockStates[Entry.getBlockID()] = {Analysis.typeErasedInitialElement(),
                                      InitEnv.fork()};
   Worklist.enqueueSuccessors(&Entry);
@@ -548,7 +553,7 @@ runTypeErasedDataflowAnalysis(
         llvm::errs() << "Old Env:\n";
         OldBlockState->Env.dump();
       });
-      if (isBackedgeNode(*Block)) {
+      if (isLoopHead(*Block)) {
         LatticeJoinEffect Effect1 = Analysis.widenTypeErased(
             NewBlockState.Lattice, OldBlockState->Lattice);
         LatticeJoinEffect Effect2 =

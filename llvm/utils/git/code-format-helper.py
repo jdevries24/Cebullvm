@@ -20,24 +20,19 @@ from github import IssueComment, PullRequest
 
 class FormatHelper:
     COMMENT_TAG = "<!--LLVM CODE FORMAT COMMENT: {fmt}-->"
-    name: str
-    friendly_name: str
+    name = "unknown"
 
     @property
     def comment_tag(self) -> str:
         return self.COMMENT_TAG.replace("fmt", self.name)
 
-    @property
-    def instructions(self) -> str:
-        raise NotImplementedError()
+    def format_run(self, changed_files: [str], args: argparse.Namespace) -> str | None:
+        pass
 
-    def format_run(
-        self, changed_files: list[str], args: argparse.Namespace
-    ) -> str | None:
-        raise NotImplementedError()
-
-    def pr_comment_text_for_diff(self, diff: str) -> str:
+    def pr_comment_text(self, diff: str) -> str:
         return f"""
+{self.comment_tag}
+
 :warning: {self.friendly_name}, {self.name} found issues in your code. :warning:
 
 <details>
@@ -71,40 +66,39 @@ View the diff from {self.name} here.
                 return comment
         return None
 
-    def update_pr(
-        self, comment_text: str, args: argparse.Namespace, create_new: bool
-    ) -> None:
+    def update_pr(self, diff: str, args: argparse.Namespace):
         repo = github.Github(args.token).get_repo(args.repo)
         pr = repo.get_issue(args.issue_number).as_pull_request()
 
-        comment_text = self.comment_tag + "\n\n" + comment_text
+        existing_comment = self.find_comment(pr)
+        pr_text = self.pr_comment_text(diff)
+
+        if existing_comment:
+            existing_comment.edit(pr_text)
+        else:
+            pr.as_issue().create_comment(pr_text)
+
+    def update_pr_success(self, args: argparse.Namespace):
+        repo = github.Github(args.token).get_repo(args.repo)
+        pr = repo.get_issue(args.issue_number).as_pull_request()
 
         existing_comment = self.find_comment(pr)
         if existing_comment:
-            existing_comment.edit(comment_text)
-        elif create_new:
-            pr.as_issue().create_comment(comment_text)
-
-    def run(self, changed_files: list[str], args: argparse.Namespace) -> bool:
-        diff = self.format_run(changed_files, args)
-        if diff is None:
-            comment_text = f"""
+            existing_comment.edit(
+                f"""
+{self.comment_tag}
 :white_check_mark: With the latest revision this PR passed the {self.friendly_name}.
 """
-            self.update_pr(comment_text, args, create_new=False)
-            return True
-        elif len(diff) > 0:
-            comment_text = self.pr_comment_text_for_diff(diff)
-            self.update_pr(comment_text, args, create_new=True)
+            )
+
+    def run(self, changed_files: [str], args: argparse.Namespace):
+        diff = self.format_run(changed_files, args)
+        if diff:
+            self.update_pr(diff, args)
             return False
         else:
-            # The formatter failed but didn't output a diff (e.g. some sort of
-            # infrastructure failure).
-            comment_text = f"""
-:warning: The {self.friendly_name} failed without printing a diff. Check the logs for stderr output. :warning:
-"""
-            self.update_pr(comment_text, args, create_new=False)
-            return False
+            self.update_pr_success(args)
+            return True
 
 
 class ClangFormatHelper(FormatHelper):
@@ -112,21 +106,21 @@ class ClangFormatHelper(FormatHelper):
     friendly_name = "C/C++ code formatter"
 
     @property
-    def instructions(self) -> str:
+    def instructions(self):
         return " ".join(self.cf_cmd)
 
     @cached_property
-    def libcxx_excluded_files(self) -> list[str]:
+    def libcxx_excluded_files(self):
         with open("libcxx/utils/data/ignore_format.txt", "r") as ifd:
             return [excl.strip() for excl in ifd.readlines()]
 
     def should_be_excluded(self, path: str) -> bool:
         if path in self.libcxx_excluded_files:
-            print(f"{self.name}: Excluding file {path}")
+            print(f"Excluding file {path}")
             return True
         return False
 
-    def filter_changed_files(self, changed_files: list[str]) -> list[str]:
+    def filter_changed_files(self, changed_files: [str]) -> [str]:
         filtered_files = []
         for path in changed_files:
             _, ext = os.path.splitext(path)
@@ -135,12 +129,10 @@ class ClangFormatHelper(FormatHelper):
                     filtered_files.append(path)
         return filtered_files
 
-    def format_run(
-        self, changed_files: list[str], args: argparse.Namespace
-    ) -> str | None:
+    def format_run(self, changed_files: [str], args: argparse.Namespace) -> str | None:
         cpp_files = self.filter_changed_files(changed_files)
         if not cpp_files:
-            return None
+            return
         cf_cmd = [
             "git-clang-format",
             "--diff",
@@ -151,15 +143,12 @@ class ClangFormatHelper(FormatHelper):
         print(f"Running: {' '.join(cf_cmd)}")
         self.cf_cmd = cf_cmd
         proc = subprocess.run(cf_cmd, capture_output=True)
-        sys.stdout.write(proc.stderr.decode("utf-8"))
 
-        if proc.returncode != 0:
-            # formatting needed, or the command otherwise failed
-            print(f"error: {self.name} exited with code {proc.returncode}")
+        # formatting needed
+        if proc.returncode == 1:
             return proc.stdout.decode("utf-8")
-        else:
-            sys.stdout.write(proc.stdout.decode("utf-8"))
-            return None
+
+        return None
 
 
 class DarkerFormatHelper(FormatHelper):
@@ -167,10 +156,10 @@ class DarkerFormatHelper(FormatHelper):
     friendly_name = "Python code formatter"
 
     @property
-    def instructions(self) -> str:
+    def instructions(self):
         return " ".join(self.darker_cmd)
 
-    def filter_changed_files(self, changed_files: list[str]) -> list[str]:
+    def filter_changed_files(self, changed_files: [str]) -> [str]:
         filtered_files = []
         for path in changed_files:
             name, ext = os.path.splitext(path)
@@ -179,12 +168,10 @@ class DarkerFormatHelper(FormatHelper):
 
         return filtered_files
 
-    def format_run(
-        self, changed_files: list[str], args: argparse.Namespace
-    ) -> str | None:
+    def format_run(self, changed_files: [str], args: argparse.Namespace) -> str | None:
         py_files = self.filter_changed_files(changed_files)
         if not py_files:
-            return None
+            return
         darker_cmd = [
             "darker",
             "--check",
@@ -195,15 +182,12 @@ class DarkerFormatHelper(FormatHelper):
         print(f"Running: {' '.join(darker_cmd)}")
         self.darker_cmd = darker_cmd
         proc = subprocess.run(darker_cmd, capture_output=True)
-        sys.stdout.write(proc.stderr.decode("utf-8"))
 
-        if proc.returncode != 0:
-            # formatting needed, or the command otherwise failed
-            print(f"error: {self.name} exited with code {proc.returncode}")
+        # formatting needed
+        if proc.returncode == 1:
             return proc.stdout.decode("utf-8")
-        else:
-            sys.stdout.write(proc.stdout.decode("utf-8"))
-            return None
+
+        return None
 
 
 ALL_FORMATTERS = (DarkerFormatHelper(), ClangFormatHelper())
@@ -241,11 +225,9 @@ if __name__ == "__main__":
     if args.changed_files:
         changed_files = args.changed_files.split(",")
 
-    failed_formatters = []
+    exit_code = 0
     for fmt in ALL_FORMATTERS:
         if not fmt.run(changed_files, args):
-            failed_formatters.append(fmt.name)
+            exit_code = 1
 
-    if len(failed_formatters) > 0:
-        print(f"error: some formatters failed: {' '.join(failed_formatters)}")
-        sys.exit(1)
+    sys.exit(exit_code)

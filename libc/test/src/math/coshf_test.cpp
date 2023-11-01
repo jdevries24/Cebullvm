@@ -18,11 +18,13 @@
 #include <errno.h>
 #include <stdint.h>
 
-using LlvmLibcCoshfTest = LIBC_NAMESPACE::testing::FPTest<float>;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-TEST_F(LlvmLibcCoshfTest, SpecialNumbers) {
+DECLARE_SPECIAL_CONSTANTS(float)
+
+TEST(LlvmLibcCoshfTest, SpecialNumbers) {
   libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::coshf(aNaN));
@@ -41,7 +43,7 @@ TEST_F(LlvmLibcCoshfTest, SpecialNumbers) {
   EXPECT_MATH_ERRNO(0);
 }
 
-TEST_F(LlvmLibcCoshfTest, Overflow) {
+TEST(LlvmLibcCoshfTest, Overflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       inf, LIBC_NAMESPACE::coshf(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);
@@ -56,7 +58,7 @@ TEST_F(LlvmLibcCoshfTest, Overflow) {
   EXPECT_MATH_ERRNO(ERANGE);
 }
 
-TEST_F(LlvmLibcCoshfTest, InFloatRange) {
+TEST(LlvmLibcCoshfTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
@@ -67,7 +69,7 @@ TEST_F(LlvmLibcCoshfTest, InFloatRange) {
   }
 }
 
-TEST_F(LlvmLibcCoshfTest, SmallValues) {
+TEST(LlvmLibcCoshfTest, SmallValues) {
   float x = float(FPBits(0x17800000U));
   float result = LIBC_NAMESPACE::coshf(x);
   EXPECT_MPFR_MATCH(mpfr::Operation::Cosh, x, result, 0.5);

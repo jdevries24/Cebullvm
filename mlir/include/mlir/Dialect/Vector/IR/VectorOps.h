@@ -105,23 +105,16 @@ bool checkSameValueRAW(TransferWriteOp defWrite, TransferReadOp read);
 /// op.
 bool checkSameValueWAW(TransferWriteOp write, TransferWriteOp priorWrite);
 
-/// Return true if we can prove that the transfer operations access disjoint
-/// memory, without requring the accessed tensor/memref to be the same.
-///
-/// If `testDynamicValueUsingBounds` is true, tries to test dynamic values
-/// via ValueBoundsOpInterface.
+/// Same behavior as `isDisjointTransferSet` but doesn't require the operations
+/// to have the same tensor/memref. This allows comparing operations accessing
+/// different tensors.
 bool isDisjointTransferIndices(VectorTransferOpInterface transferA,
-                               VectorTransferOpInterface transferB,
-                               bool testDynamicValueUsingBounds = false);
+                               VectorTransferOpInterface transferB);
 
 /// Return true if we can prove that the transfer operations access disjoint
-/// memory, requiring the operations to access the same tensor/memref.
-///
-/// If `testDynamicValueUsingBounds` is true, tries to test dynamic values
-/// via ValueBoundsOpInterface.
+/// memory.
 bool isDisjointTransferSet(VectorTransferOpInterface transferA,
-                           VectorTransferOpInterface transferB,
-                           bool testDynamicValueUsingBounds = false);
+                           VectorTransferOpInterface transferB);
 
 /// Return the result value of reducing two scalar/vector values with the
 /// corresponding arith operation.

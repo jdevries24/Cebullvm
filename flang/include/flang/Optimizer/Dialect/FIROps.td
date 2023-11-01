@@ -2063,8 +2063,7 @@ class region_Op<string mnemonic, list<Trait> traits = []> :
 }
 
 def fir_DoLoopOp : region_Op<"do_loop",
-    [DeclareOpInterfaceMethods<LoopLikeOpInterface,
-        ["getYieldedValuesMutable"]>]> {
+    [DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
   let summary = "generalized loop operation";
   let description = [{
     Generalized high-level looping construct. This operation is similar to
@@ -2119,10 +2118,6 @@ def fir_DoLoopOp : region_Op<"do_loop",
     }
     mlir::Operation::operand_range getIterOperands() {
       return getOperands().drop_front(getNumControlOperands());
-    }
-    llvm::MutableArrayRef<mlir::OpOperand> getInitsMutable() {
-      return
-          getOperation()->getOpOperands().drop_front(getNumControlOperands());
     }
 
     void setLowerBound(mlir::Value bound) { (*this)->setOperand(0, bound); }
@@ -2210,8 +2205,7 @@ def fir_IfOp : region_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterfac
 }
 
 def fir_IterWhileOp : region_Op<"iterate_while",
-    [DeclareOpInterfaceMethods<LoopLikeOpInterface,
-        ["getYieldedValuesMutable"]>]> {
+    [DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
   let summary = "DO loop with early exit condition";
   let description = [{
     This single-entry, single-exit looping construct is useful for lowering
@@ -2275,10 +2269,6 @@ def fir_IterWhileOp : region_Op<"iterate_while",
     }
     mlir::Operation::operand_range getIterOperands() {
       return getOperands().drop_front(getNumControlOperands());
-    }
-    llvm::MutableArrayRef<mlir::OpOperand> getInitsMutable() {
-      return
-          getOperation()->getOpOperands().drop_front(getNumControlOperands());
     }
 
     void setLowerBound(mlir::Value bound) { (*this)->setOperand(0, bound); }
@@ -2538,18 +2528,12 @@ def fir_NegcOp : ComplexUnaryArithmeticOp<"negc">;
 
 class ComplexArithmeticOp<string mnemonic, list<Trait> traits = []> :
       fir_ArithmeticOp<mnemonic, traits>,
-      Arguments<(ins fir_ComplexType:$lhs, fir_ComplexType:$rhs,
-          DefaultValuedAttr<Arith_FastMathAttr,
-                            "::mlir::arith::FastMathFlags::none">:$fastmath)>;
+      Arguments<(ins fir_ComplexType:$lhs, fir_ComplexType:$rhs)>;
 
-def fir_AddcOp : ComplexArithmeticOp<"addc",
-    [Commutative, DeclareOpInterfaceMethods<ArithFastMathInterface>]>;
-def fir_SubcOp : ComplexArithmeticOp<"subc",
-    [DeclareOpInterfaceMethods<ArithFastMathInterface>]>;
-def fir_MulcOp : ComplexArithmeticOp<"mulc",
-    [Commutative, DeclareOpInterfaceMethods<ArithFastMathInterface>]>;
-def fir_DivcOp : ComplexArithmeticOp<"divc",
-    [DeclareOpInterfaceMethods<ArithFastMathInterface>]>;
+def fir_AddcOp : ComplexArithmeticOp<"addc", [Commutative]>;
+def fir_SubcOp : ComplexArithmeticOp<"subc">;
+def fir_MulcOp : ComplexArithmeticOp<"mulc", [Commutative]>;
+def fir_DivcOp : ComplexArithmeticOp<"divc">;
 // Pow is a builtin call and not a primitive
 
 def fir_CmpcOp : fir_Op<"cmpc",

@@ -734,10 +734,10 @@ void MachODumper::printStackMap() const {
 
   if (Obj->isLittleEndian())
     prettyPrintStackMap(
-        W, StackMapParser<llvm::endianness::little>(StackMapContentsArray));
+        W, StackMapParser<support::little>(StackMapContentsArray));
   else
     prettyPrintStackMap(
-        W, StackMapParser<llvm::endianness::big>(StackMapContentsArray));
+        W, StackMapParser<support::big>(StackMapContentsArray));
 }
 
 void MachODumper::printCGProfile() {

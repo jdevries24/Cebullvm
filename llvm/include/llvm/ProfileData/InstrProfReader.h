@@ -202,13 +202,11 @@ public:
   /// instrprof file.
   static Expected<std::unique_ptr<InstrProfReader>>
   create(const Twine &Path, vfs::FileSystem &FS,
-         const InstrProfCorrelator *Correlator = nullptr,
-         std::function<void(Error)> Warn = nullptr);
+         const InstrProfCorrelator *Correlator = nullptr);
 
   static Expected<std::unique_ptr<InstrProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer,
-         const InstrProfCorrelator *Correlator = nullptr,
-         std::function<void(Error)> Warn = nullptr);
+         const InstrProfCorrelator *Correlator = nullptr);
 
   /// \param Weight for raw profiles use this as the temporal profile trace
   ///               weight
@@ -325,14 +323,11 @@ private:
   // the variant types of the profile.
   uint64_t Version;
   uint64_t CountersDelta;
-  uint64_t BitmapDelta;
   uint64_t NamesDelta;
   const RawInstrProf::ProfileData<IntPtrT> *Data;
   const RawInstrProf::ProfileData<IntPtrT> *DataEnd;
   const char *CountersStart;
   const char *CountersEnd;
-  const char *BitmapStart;
-  const char *BitmapEnd;
   const char *NamesStart;
   const char *NamesEnd;
   // After value profile is all read, this pointer points to
@@ -346,19 +341,12 @@ private:
   /// Start address of binary id length and data pairs.
   const uint8_t *BinaryIdsStart;
 
-  std::function<void(Error)> Warn;
-
-  /// Maxium counter value 2^56.
-  static const uint64_t MaxCounterValue = (1ULL << 56);
-
 public:
   RawInstrProfReader(std::unique_ptr<MemoryBuffer> DataBuffer,
-                     const InstrProfCorrelator *Correlator,
-                     std::function<void(Error)> Warn)
+                     const InstrProfCorrelator *Correlator)
       : DataBuffer(std::move(DataBuffer)),
         Correlator(dyn_cast_or_null<const InstrProfCorrelatorImpl<IntPtrT>>(
-            Correlator)),
-        Warn(Warn) {}
+            Correlator)) {}
   RawInstrProfReader(const RawInstrProfReader &) = delete;
   RawInstrProfReader &operator=(const RawInstrProfReader &) = delete;
 
@@ -428,9 +416,9 @@ private:
     if (!ShouldSwapBytes)
       return llvm::endianness::native;
     if (llvm::endianness::native == llvm::endianness::little)
-      return llvm::endianness::big;
+      return support::big;
     else
-      return llvm::endianness::little;
+      return support::little;
   }
 
   inline uint8_t getNumPaddingBytes(uint64_t SizeInBytes) {
@@ -440,7 +428,6 @@ private:
   Error readName(NamedInstrProfRecord &Record);
   Error readFuncHash(NamedInstrProfRecord &Record);
   Error readRawCounts(InstrProfRecord &Record);
-  Error readRawBitmapBytes(InstrProfRecord &Record);
   Error readValueProfilingData(InstrProfRecord &Record);
   bool atEnd() const { return Data == DataEnd; }
 
@@ -453,7 +440,6 @@ private:
       // As we advance to the next record, we maintain the correct CountersDelta
       // with respect to the next record.
       CountersDelta -= sizeof(*Data);
-      BitmapDelta -= sizeof(*Data);
     }
     Data++;
     ValueDataStart += CurValueDataSize;
@@ -491,7 +477,7 @@ class InstrProfLookupTrait {
   // Endianness of the input value profile data.
   // It should be LE by default, but can be changed
   // for testing purpose.
-  llvm::endianness ValueProfDataEndianness = llvm::endianness::little;
+  llvm::endianness ValueProfDataEndianness = support::little;
 
 public:
   InstrProfLookupTrait(IndexedInstrProf::HashT HashType, unsigned FormatVersion)
@@ -514,10 +500,8 @@ public:
   ReadKeyDataLength(const unsigned char *&D) {
     using namespace support;
 
-    offset_type KeyLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
-    offset_type DataLen =
-        endian::readNext<offset_type, llvm::endianness::little, unaligned>(D);
+    offset_type KeyLen = endian::readNext<offset_type, little, unaligned>(D);
+    offset_type DataLen = endian::readNext<offset_type, little, unaligned>(D);
     return std::make_pair(KeyLen, DataLen);
   }
 
@@ -746,10 +730,6 @@ public:
   /// Fill Counts with the profile data for the given function name.
   Error getFunctionCounts(StringRef FuncName, uint64_t FuncHash,
                           std::vector<uint64_t> &Counts);
-
-  /// Fill Bitmap Bytes with the profile data for the given function name.
-  Error getFunctionBitmapBytes(StringRef FuncName, uint64_t FuncHash,
-                               std::vector<uint8_t> &BitmapBytes);
 
   /// Return the maximum of all known function counts.
   /// \c UseCS indicates whether to use the context-sensitive count.

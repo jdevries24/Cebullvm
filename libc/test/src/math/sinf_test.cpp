@@ -18,13 +18,14 @@
 #include <errno.h>
 #include <stdint.h>
 
-using LlvmLibcSinfTest = LIBC_NAMESPACE::testing::FPTest<float>;
-
 using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-TEST_F(LlvmLibcSinfTest, SpecialNumbers) {
+DECLARE_SPECIAL_CONSTANTS(float)
+
+TEST(LlvmLibcSinfTest, SpecialNumbers) {
   libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinf(aNaN));
@@ -43,7 +44,7 @@ TEST_F(LlvmLibcSinfTest, SpecialNumbers) {
   EXPECT_MATH_ERRNO(EDOM);
 }
 
-TEST_F(LlvmLibcSinfTest, InFloatRange) {
+TEST(LlvmLibcSinfTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
@@ -55,7 +56,7 @@ TEST_F(LlvmLibcSinfTest, InFloatRange) {
   }
 }
 
-TEST_F(LlvmLibcSinfTest, SpecificBitPatterns) {
+TEST(LlvmLibcSinfTest, SpecificBitPatterns) {
   constexpr int N = 36;
   constexpr uint32_t INPUTS[N] = {
       0x3f06'0a92U, // x = pi/6
@@ -106,7 +107,7 @@ TEST_F(LlvmLibcSinfTest, SpecificBitPatterns) {
 }
 
 // For small values, sin(x) is x.
-TEST_F(LlvmLibcSinfTest, SmallValues) {
+TEST(LlvmLibcSinfTest, SmallValues) {
   float x = float(FPBits(0x1780'0000U));
   EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sin, x,
                                  LIBC_NAMESPACE::sinf(x), 0.5);
@@ -118,7 +119,7 @@ TEST_F(LlvmLibcSinfTest, SmallValues) {
 
 // SDCOMP-26094: check sinf in the cases for which the range reducer
 // returns values furthest beyond its nominal upper bound of pi/4.
-TEST_F(LlvmLibcSinfTest, SDCOMP_26094) {
+TEST(LlvmLibcSinfTest, SDCOMP_26094) {
   for (uint32_t v : SDCOMP26094_VALUES) {
     float x = float(FPBits((v)));
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sin, x,

@@ -92,7 +92,10 @@ constexpr void test_join_view() {
   }
 }
 
-constexpr bool test_constexpr() {
+int main(int, char**) {
+  test_containers<std::deque<int>, std::deque<int>>();
+  test_containers<std::deque<int>, std::vector<int>>();
+  test_containers<std::vector<int>, std::deque<int>>();
   test_containers<std::vector<int>, std::vector<int>>();
 
   types::for_each(types::forward_iterator_list<int*>{}, []<class Iter> {
@@ -100,16 +103,6 @@ constexpr bool test_constexpr() {
     test_join_view<Iter, sentinel_wrapper<Iter>>();
     test_join_view<Iter, sized_sentinel<Iter>>();
   });
-  return true;
-}
-
-int main(int, char**) {
-  test_containers<std::deque<int>, std::deque<int>>();
-  test_containers<std::deque<int>, std::vector<int>>();
-  test_containers<std::vector<int>, std::deque<int>>();
-
-  test_constexpr();
-  static_assert(test_constexpr());
 
   return 0;
 }

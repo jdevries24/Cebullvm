@@ -16,9 +16,11 @@
 #include <errno.h>
 #include <stdint.h>
 
-using LlvmLibcSinCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
 
-TEST_F(LlvmLibcSinCosfTest, SpecialNumbers) {
+DECLARE_SPECIAL_CONSTANTS(float)
+
+TEST(LlvmLibcSinCosfTest, SpecialNumbers) {
   libc_errno = 0;
   float sin, cos;
 

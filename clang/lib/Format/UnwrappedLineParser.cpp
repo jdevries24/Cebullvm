@@ -213,7 +213,7 @@ void UnwrappedLineParser::parse() {
     }
 
     // Create line with eof token.
-    assert(eof());
+    assert(FormatTok->is(tok::eof));
     pushToken(FormatTok);
     addUnwrappedLine();
 
@@ -638,14 +638,6 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
       Entry.Tok->setBlockKind(BK_Block);
 
   FormatTok = Tokens->setPosition(StoredPosition);
-}
-
-// Sets the token type of the directly previous right brace.
-void UnwrappedLineParser::setPreviousRBraceType(TokenType Type) {
-  if (auto Prev = FormatTok->getPreviousNonComment();
-      Prev && Prev->is(tok::r_brace)) {
-    Prev->setFinalizedType(Type);
-  }
 }
 
 template <class T>
@@ -1967,9 +1959,8 @@ void UnwrappedLineParser::parseStructuralElement(
         auto I = Line->Tokens.begin(), E = Line->Tokens.end();
         while (I != E && I->Tok->is(tok::comment))
           ++I;
-        if (Style.isVerilog())
-          while (I != E && I->Tok->is(tok::hash))
-            ++I;
+        while (I != E && Style.isVerilog() && I->Tok->is(tok::hash))
+          ++I;
         return I != E && (++I == E);
       };
       if (OneTokenSoFar()) {
@@ -2227,6 +2218,9 @@ bool UnwrappedLineParser::tryToParseLambda() {
     // followed by an `a->b` expression, such as:
     // ([obj func:arg] + a->b)
     // Otherwise the code below would parse as a lambda.
+    //
+    // FIXME: This heuristic is incorrect for C++20 generic lambdas with
+    // explicit template lists: []<bool b = true && false>(U &&u){}
     case tok::plus:
     case tok::minus:
     case tok::exclaim:
@@ -2256,7 +2250,7 @@ bool UnwrappedLineParser::tryToParseLambda() {
       // This might or might not actually be a lambda arrow (this could be an
       // ObjC method invocation followed by a dereferencing arrow). We might
       // reset this back to TT_Unknown in TokenAnnotator.
-      FormatTok->setFinalizedType(TT_TrailingReturnArrow);
+      FormatTok->setFinalizedType(TT_LambdaArrow);
       SeenArrow = true;
       nextToken();
       break;
@@ -2266,11 +2260,6 @@ bool UnwrappedLineParser::tryToParseLambda() {
       parseRequiresClause(RequiresToken);
       break;
     }
-    case tok::equal:
-      if (!InTemplateParameterList)
-        return true;
-      nextToken();
-      break;
     default:
       return true;
     }
@@ -2767,7 +2756,6 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
     parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u,
                /*MunchSemi=*/true, KeepIfBraces, &IfBlockKind);
-    setPreviousRBraceType(TT_ControlStatementRBrace);
     if (Style.BraceWrapping.BeforeElse)
       addUnwrappedLine();
     else
@@ -2806,7 +2794,6 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
       FormatToken *IfLBrace =
           parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u,
                      /*MunchSemi=*/true, KeepElseBraces, &ElseBlockKind);
-      setPreviousRBraceType(TT_ElseRBrace);
       if (FormatTok->is(tok::kw_else)) {
         KeepElseBraces = KeepElseBraces ||
                          ElseBlockKind == IfStmtKind::IfOnly ||
@@ -3070,12 +3057,12 @@ void UnwrappedLineParser::parseLoopBody(bool KeepBraces, bool WrapRightBrace) {
   keepAncestorBraces();
 
   if (isBlockBegin(*FormatTok)) {
-    FormatTok->setFinalizedType(TT_ControlStatementLBrace);
+    if (!KeepBraces)
+      FormatTok->setFinalizedType(TT_ControlStatementLBrace);
     FormatToken *LeftBrace = FormatTok;
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
     parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u,
                /*MunchSemi=*/true, KeepBraces);
-    setPreviousRBraceType(TT_ControlStatementRBrace);
     if (!KeepBraces) {
       assert(!NestedTooDeep.empty());
       if (!NestedTooDeep.back())
@@ -3136,8 +3123,6 @@ void UnwrappedLineParser::parseDoWhile() {
     addUnwrappedLine();
     return;
   }
-
-  FormatTok->setFinalizedType(TT_DoWhile);
 
   // If in Whitesmiths mode, the line with the while() needs to be indented
   // to the same level as the block.
@@ -3211,9 +3196,7 @@ void UnwrappedLineParser::parseSwitch() {
 
   if (FormatTok->is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Style, Line->Level);
-    FormatTok->setFinalizedType(TT_ControlStatementLBrace);
     parseBlock();
-    setPreviousRBraceType(TT_ControlStatementRBrace);
     addUnwrappedLine();
   } else {
     addUnwrappedLine();
@@ -3730,7 +3713,10 @@ bool UnwrappedLineParser::parseEnum() {
       nextToken();
     addUnwrappedLine();
   }
-  setPreviousRBraceType(TT_EnumRBrace);
+  if (auto Prev = FormatTok->getPreviousNonComment();
+      Prev && Prev->is(tok::r_brace)) {
+    Prev->setFinalizedType(TT_EnumRBrace);
+  }
   return true;
 
   // There is no addUnwrappedLine() here so that we fall through to parsing a
@@ -3964,7 +3950,10 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
       unsigned AddLevels = Style.IndentAccessModifiers ? 2u : 1u;
       parseBlock(/*MustBeDeclaration=*/true, AddLevels, /*MunchSemi=*/false);
     }
-    setPreviousRBraceType(ClosingBraceType);
+    if (auto Prev = FormatTok->getPreviousNonComment();
+        Prev && Prev->is(tok::r_brace)) {
+      Prev->setFinalizedType(ClosingBraceType);
+    }
   }
   // There is no addUnwrappedLine() here so that we fall through to parsing a
   // structural element afterwards. Thus, in "class A {} n, m;",

@@ -38,23 +38,13 @@ public:
   // Push forward maps from dimensions to levels.
   //
 
-  // Map from dimRank in to lvlRank out.
   template <typename T>
   inline void pushforward(const T *in, T *out) const {
     if (isPermutation) {
-      for (uint64_t l = 0; l < lvlRank; l++) {
-        out[l] = in[dim2lvl[l]];
-      }
+      for (uint64_t i = 0; i < lvlRank; ++i)
+        out[i] = in[lvl2dim[i]];
     } else {
-      uint64_t i, c;
-      for (uint64_t l = 0; l < lvlRank; l++)
-        if (isFloor(l, i, c)) {
-          out[l] = in[i] / c;
-        } else if (isMod(l, i, c)) {
-          out[l] = in[i] % c;
-        } else {
-          out[l] = in[dim2lvl[l]];
-        }
+      assert(0 && "coming soon");
     }
   }
 
@@ -62,20 +52,13 @@ public:
   // Push backward maps from levels to dimensions.
   //
 
-  // Map from lvlRank in to dimRank out.
   template <typename T>
   inline void pushbackward(const T *in, T *out) const {
     if (isPermutation) {
-      for (uint64_t d = 0; d < dimRank; d++)
-        out[d] = in[lvl2dim[d]];
+      for (uint64_t i = 0; i < dimRank; ++i)
+        out[i] = in[dim2lvl[i]];
     } else {
-      uint64_t i, c, ii;
-      for (uint64_t d = 0; d < dimRank; d++)
-        if (isMul(d, i, c, ii)) {
-          out[d] = in[i] + c * in[ii];
-        } else {
-          out[d] = in[lvl2dim[d]];
-        }
+      assert(0 && "coming soon");
     }
   }
 
@@ -84,10 +67,6 @@ public:
 
 private:
   bool isPermutationMap() const;
-
-  bool isFloor(uint64_t l, uint64_t &i, uint64_t &c) const;
-  bool isMod(uint64_t l, uint64_t &i, uint64_t &c) const;
-  bool isMul(uint64_t d, uint64_t &i, uint64_t &c, uint64_t &ii) const;
 
   const uint64_t dimRank;
   const uint64_t lvlRank;

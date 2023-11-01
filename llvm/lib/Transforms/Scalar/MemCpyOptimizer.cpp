@@ -1068,19 +1068,29 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 
   // We can't create address space casts here because we don't know if they're
   // safe for the target.
-  if (cpySrc->getType() != cpyDest->getType())
+  if (cpySrc->getType()->getPointerAddressSpace() !=
+      cpyDest->getType()->getPointerAddressSpace())
     return false;
   for (unsigned ArgI = 0; ArgI < C->arg_size(); ++ArgI)
     if (C->getArgOperand(ArgI)->stripPointerCasts() == cpySrc &&
-        cpySrc->getType() != C->getArgOperand(ArgI)->getType())
+        cpySrc->getType()->getPointerAddressSpace() !=
+            C->getArgOperand(ArgI)->getType()->getPointerAddressSpace())
       return false;
 
   // All the checks have passed, so do the transformation.
   bool changedArgument = false;
   for (unsigned ArgI = 0; ArgI < C->arg_size(); ++ArgI)
     if (C->getArgOperand(ArgI)->stripPointerCasts() == cpySrc) {
+      Value *Dest = cpySrc->getType() == cpyDest->getType() ?  cpyDest
+        : CastInst::CreatePointerCast(cpyDest, cpySrc->getType(),
+                                      cpyDest->getName(), C);
       changedArgument = true;
-      C->setArgOperand(ArgI, cpyDest);
+      if (C->getArgOperand(ArgI)->getType() == Dest->getType())
+        C->setArgOperand(ArgI, Dest);
+      else
+        C->setArgOperand(ArgI, CastInst::CreatePointerCast(
+                                   Dest, C->getArgOperand(ArgI)->getType(),
+                                   Dest->getName(), C));
     }
 
   if (!changedArgument)
@@ -1720,7 +1730,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
       if (auto *CopySize = dyn_cast<ConstantInt>(M->getLength())) {
         if (auto *C = dyn_cast<CallInst>(MI)) {
           if (performCallSlotOptzn(M, M, M->getDest(), M->getSource(),
-                                   TypeSize::Fixed(CopySize->getZExtValue()),
+                                   TypeSize::getFixed(CopySize->getZExtValue()),
                                    M->getDestAlign().valueOrOne(), BAA,
                                    [C]() -> CallInst * { return C; })) {
             LLVM_DEBUG(dbgs() << "Performed call slot optimization:\n"
@@ -1766,7 +1776,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   if (Len == nullptr)
     return false;
   if (performStackMoveOptzn(M, M, DestAlloca, SrcAlloca,
-                            TypeSize::Fixed(Len->getZExtValue()), BAA)) {
+                            TypeSize::getFixed(Len->getZExtValue()), BAA)) {
     // Avoid invalidating the iterator.
     BBI = M->getNextNonDebugInstruction()->getIterator();
     eraseInstruction(M);
@@ -1829,7 +1839,7 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
   // The length of the memcpy must be larger or equal to the size of the byval.
   auto *C1 = dyn_cast<ConstantInt>(MDep->getLength());
   if (!C1 || !TypeSize::isKnownGE(
-                 TypeSize::Fixed(C1->getValue().getZExtValue()), ByValSize))
+                 TypeSize::getFixed(C1->getValue().getZExtValue()), ByValSize))
     return false;
 
   // Get the alignment of the byval.  If the call doesn't specify the alignment,
@@ -1845,8 +1855,9 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
                                  DT) < *ByValAlign)
     return false;
 
-  // The type of the memcpy source must match the byval argument
-  if (MDep->getSource()->getType() != ByValArg->getType())
+  // The address space of the memcpy source must match the byval argument
+  if (MDep->getSource()->getType()->getPointerAddressSpace() !=
+      ByValArg->getType()->getPointerAddressSpace())
     return false;
 
   // Verify that the copied-from memory doesn't change in between the memcpy and
@@ -1864,7 +1875,6 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
                     << "  " << CB << "\n");
 
   // Otherwise we're good!  Update the byval argument.
-  combineAAMetadata(&CB, MDep);
   CB.setArgOperand(ArgNo, MDep->getSource());
   ++NumMemCpyInstr;
   return true;
@@ -1921,8 +1931,9 @@ bool MemCpyOptPass::processImmutArgument(CallBase &CB, unsigned ArgNo) {
   if (!MDep || MDep->isVolatile() || AI != MDep->getDest())
     return false;
 
-  // The type of the memcpy source must match the immut argument
-  if (MDep->getSource()->getType() != ImmutArg->getType())
+  // The address space of the memcpy source must match the immut argument
+  if (MDep->getSource()->getType()->getPointerAddressSpace() !=
+      ImmutArg->getType()->getPointerAddressSpace())
     return false;
 
   // 2-1. The length of the memcpy must be equal to the size of the alloca.

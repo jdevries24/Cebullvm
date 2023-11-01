@@ -19,7 +19,6 @@
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h"
-#include "mlir/Dialect/ArmSVE/Transforms/Passes.h"
 #include "mlir/Dialect/Async/Passes.h"
 #include "mlir/Dialect/Bufferization/Pipelines/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
@@ -83,12 +82,10 @@ inline void registerAllPasses() {
   transform::registerTransformPasses();
   vector::registerVectorPasses();
   arm_sme::registerArmSMEPasses();
-  arm_sve::registerArmSVEPasses();
 
   // Dialect pipelines
   bufferization::registerBufferizationPipelines();
   sparse_tensor::registerSparseTensorPipelines();
-  tosa::registerTosaToLinalgPipelines();
 }
 
 } // namespace mlir

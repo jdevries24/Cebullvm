@@ -99,6 +99,7 @@ namespace {
       (void) llvm::createLoopUnrollPass();
       (void) llvm::createLoopRotatePass();
       (void) llvm::createLowerConstantIntrinsicsPass();
+      (void) llvm::createLowerExpectIntrinsicPass();
       (void) llvm::createLowerGlobalDtorsLegacyPass();
       (void) llvm::createLowerInvokePass();
       (void) llvm::createLowerSwitchPass();

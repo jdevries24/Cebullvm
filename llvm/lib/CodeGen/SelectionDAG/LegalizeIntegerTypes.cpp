@@ -371,7 +371,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_AtomicCmpSwap(AtomicSDNode *N,
         N->getMemOperand());
     ReplaceValueWith(SDValue(N, 0), Res.getValue(0));
     ReplaceValueWith(SDValue(N, 2), Res.getValue(2));
-    return DAG.getSExtOrTrunc(Res.getValue(1), SDLoc(N), NVT);
+    return Res.getValue(1);
   }
 
   // Op2 is used for the comparison and thus must be extended according to the
@@ -4422,7 +4422,7 @@ void DAGTypeLegalizer::ExpandIntRes_ShiftThroughStack(SDNode *N, SDValue &Lo,
   // FIXME: should we be more picky about alignment?
   Align StackSlotAlignment(1);
   SDValue StackPtr = DAG.CreateStackTemporary(
-      TypeSize::Fixed(StackSlotByteWidth), StackSlotAlignment);
+      TypeSize::getFixed(StackSlotByteWidth), StackSlotAlignment);
   EVT PtrTy = StackPtr.getValueType();
   SDValue Ch = DAG.getEntryNode();
 

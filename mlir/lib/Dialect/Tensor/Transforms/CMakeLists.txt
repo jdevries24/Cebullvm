@@ -30,7 +30,6 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRMemRefDialect
   MLIRPass
   MLIRSCFDialect
-  MLIRSubsetOpInterface
   MLIRTensorDialect
   MLIRTensorUtils
   MLIRTilingInterface

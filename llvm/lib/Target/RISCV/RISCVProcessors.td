@@ -242,5 +242,4 @@ def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
                                              FeatureStdExtZicbom,
                                              FeatureStdExtZicbop,
                                              FeatureStdExtZicboz,
-                                             FeatureVendorXVentanaCondOps],
-                                             [TuneVentanaVeyron]>;
+                                             FeatureVendorXVentanaCondOps]>;

@@ -29,14 +29,6 @@ inline bool simple_streq(char *first, char *second, int length) {
   return true;
 }
 
-inline int simple_strlen(const char *str) {
-  int i = 0;
-  for (; *str; ++str, ++i) {
-    ;
-  }
-  return i;
-}
-
 enum class TestResult {
   Success,
   BufferSizeFailed,
@@ -44,8 +36,7 @@ enum class TestResult {
   StringsNotEqual,
 };
 
-template <typename F>
-inline TestResult test_vals(const char *fmt, F num, int prec, int width) {
+inline TestResult test_vals(const char *fmt, double num, int prec, int width) {
   // Call snprintf on a nullptr to get the buffer size.
   int buffer_size = LIBC_NAMESPACE::snprintf(nullptr, 0, fmt, width, prec, num);
 
@@ -79,7 +70,10 @@ inline TestResult test_vals(const char *fmt, F num, int prec, int width) {
 }
 
 constexpr char const *fmt_arr[] = {
-    "%*.*f", "%*.*e", "%*.*g", "%*.*a", "%*.*Lf", "%*.*Le", "%*.*Lg", "%*.*La",
+    "%*.*f",
+    "%*.*e",
+    "%*.*g",
+    "%*.*a",
 };
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
@@ -106,12 +100,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
   num = LIBC_NAMESPACE::fputil::FPBits<double>(raw_num).get_val();
 
-  // While we could create a "ld_raw_num" from additional bytes, it's much
-  // easier to stick with simply casting num to long double. This avoids the
-  // issues around 80 bit long doubles, especially unnormal and pseudo-denormal
-  // numbers, which MPFR doesn't handle well.
-  long double ld_num = static_cast<long double>(num);
-
   if (width > MAX_SIZE) {
     width = MAX_SIZE;
   } else if (width < -MAX_SIZE) {
@@ -126,13 +114,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
   for (size_t cur_fmt = 0; cur_fmt < sizeof(fmt_arr) / sizeof(char *);
        ++cur_fmt) {
-    int fmt_len = simple_strlen(fmt_arr[cur_fmt]);
-    TestResult result;
-    if (fmt_arr[cur_fmt][fmt_len - 2] == 'L') {
-      result = test_vals<long double>(fmt_arr[cur_fmt], ld_num, prec, width);
-    } else {
-      result = test_vals<double>(fmt_arr[cur_fmt], num, prec, width);
-    }
+    TestResult result = test_vals(fmt_arr[cur_fmt], num, prec, width);
     if (result != TestResult::Success) {
       __builtin_trap();
     }

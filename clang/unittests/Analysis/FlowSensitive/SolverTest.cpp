@@ -25,7 +25,6 @@ using namespace clang;
 using namespace dataflow;
 
 using test::ConstraintContext;
-using test::parseFormulas;
 using testing::_;
 using testing::AnyOf;
 using testing::Pair;
@@ -33,6 +32,21 @@ using testing::UnorderedElementsAre;
 
 constexpr auto AssignedTrue = Solver::Result::Assignment::AssignedTrue;
 constexpr auto AssignedFalse = Solver::Result::Assignment::AssignedFalse;
+
+std::vector<const Formula *> parseAll(Arena &A, StringRef Lines) {
+  std::vector<const Formula *> Result;
+  while (!Lines.empty()) {
+    auto [First, Rest] = Lines.split('\n');
+    Lines = Rest;
+    if (First.trim().empty())
+      continue;
+    if (auto F = A.parseFormula(First))
+      Result.push_back(&*F);
+    else
+      ADD_FAILURE() << llvm::toString(F.takeError());
+  }
+  return Result;
+}
 
 // Checks if the conjunction of `Vals` is satisfiable and returns the
 // corresponding result.
@@ -263,7 +277,7 @@ TEST(SolverTest, IffWithUnits) {
 
 TEST(SolverTest, IffWithUnitsConflict) {
   Arena A;
-  auto Constraints = parseFormulas(A, R"(
+  auto Constraints = parseAll(A, R"(
      (V0 = V1)
      V0
      !V1
@@ -273,7 +287,7 @@ TEST(SolverTest, IffWithUnitsConflict) {
 
 TEST(SolverTest, IffTransitiveConflict) {
   Arena A;
-  auto Constraints = parseFormulas(A, R"(
+  auto Constraints = parseAll(A, R"(
      (V0 = V1)
      (V1 = V2)
      V2
@@ -284,7 +298,7 @@ TEST(SolverTest, IffTransitiveConflict) {
 
 TEST(SolverTest, DeMorgan) {
   Arena A;
-  auto Constraints = parseFormulas(A, R"(
+  auto Constraints = parseAll(A, R"(
      (!(V0 | V1) = (!V0 & !V1))
      (!(V2 & V3) = (!V2 | !V3))
   )");
@@ -293,7 +307,7 @@ TEST(SolverTest, DeMorgan) {
 
 TEST(SolverTest, RespectsAdditionalConstraints) {
   Arena A;
-  auto Constraints = parseFormulas(A, R"(
+  auto Constraints = parseAll(A, R"(
      (V0 = V1)
      V0
      !V1
@@ -303,7 +317,7 @@ TEST(SolverTest, RespectsAdditionalConstraints) {
 
 TEST(SolverTest, ImplicationIsEquivalentToDNF) {
   Arena A;
-  auto Constraints = parseFormulas(A, R"(
+  auto Constraints = parseAll(A, R"(
      !((V0 => V1) = (!V0 | V1))
   )");
   EXPECT_THAT(solve(Constraints), unsat());
@@ -311,7 +325,7 @@ TEST(SolverTest, ImplicationIsEquivalentToDNF) {
 
 TEST(SolverTest, ImplicationConflict) {
   Arena A;
-  auto Constraints = parseFormulas(A, R"(
+  auto Constraints = parseAll(A, R"(
      (V0 => V1)
      (V0 & !V1)
   )");
@@ -320,7 +334,7 @@ TEST(SolverTest, ImplicationConflict) {
 
 TEST(SolverTest, ReachedLimitsReflectsTimeouts) {
   Arena A;
-  auto Constraints = parseFormulas(A, R"(
+  auto Constraints = parseAll(A, R"(
      (!(V0 | V1) = (!V0 & !V1))
      (!(V2 & V3) = (!V2 & !V3))
   )");

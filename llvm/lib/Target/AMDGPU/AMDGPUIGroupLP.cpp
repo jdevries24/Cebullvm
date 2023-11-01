@@ -965,10 +965,11 @@ private:
 
       // Does the VALU have a DS_WRITE successor that is the same as other
       // VALU already in the group. The V_PERMs will all share 1 DS_W succ
-      return llvm::any_of(*Cache, [&SU](SUnit *Elt) {
-        return llvm::any_of(SU->Succs, [&Elt](const SDep &ThisSucc) {
-          return ThisSucc.getSUnit() == Elt;
-        });
+      return std::any_of(Cache->begin(), Cache->end(), [&SU](SUnit *Elt) {
+        return std::any_of(SU->Succs.begin(), SU->Succs.end(),
+                           [&Elt](const SDep &ThisSucc) {
+                             return ThisSucc.getSUnit() == Elt;
+                           });
       });
     }
 
@@ -1087,9 +1088,10 @@ private:
       auto DAG = SyncPipe[0].DAG;
       // Does the previous DS_WRITE share a V_PERM predecessor with this
       // VMEM_READ
-      return llvm::any_of(*Cache, [&SU, &DAG](SUnit *Elt) {
-        return DAG->IsReachable(const_cast<SUnit *>(SU), Elt);
-      });
+      return (
+          std::any_of(Cache->begin(), Cache->end(), [&SU, &DAG](SUnit *Elt) {
+            return DAG->IsReachable(const_cast<SUnit *>(SU), Elt);
+          }));
     }
     SharesPredWithPrevNthGroup(unsigned Distance, const SIInstrInfo *TII,
                                unsigned SGID, bool NeedsCache = false)
@@ -1121,8 +1123,8 @@ void MFMASmallGemmSingleWaveOpt::applyIGLPStrategy(
   unsigned MFMACount = 0;
   unsigned DSRCount = 0;
 
-  assert((IsPostRA || (DSWCount == 0 && DSWWithPermCount == 0 &&
-                       DSWWithSharedVMEMCount == 0)) &&
+  assert((IsPostRA ||
+          DSWCount == DSWWithPermCount == DSWWithSharedVMEMCount == 0) &&
          "DSWCounters should be zero in pre-RA scheduling!");
   SmallVector<SUnit *, 6> DSWithPerms;
   for (auto &SU : DAG->SUnits) {

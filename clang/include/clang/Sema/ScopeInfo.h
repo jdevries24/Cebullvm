@@ -189,9 +189,6 @@ public:
   /// First SEH '__try' statement in the current function.
   SourceLocation FirstSEHTryLoc;
 
-  /// First use of a VLA within the current function.
-  SourceLocation FirstVLALoc;
-
 private:
   /// Used to determine if errors occurred in this function or block.
   DiagnosticErrorTrap ErrorTrap;
@@ -474,11 +471,6 @@ public:
   void setHasSEHTry(SourceLocation TryLoc) {
     setHasBranchProtectedScope();
     FirstSEHTryLoc = TryLoc;
-  }
-
-  void setHasVLA(SourceLocation VLALoc) {
-    if (FirstVLALoc.isInvalid())
-      FirstVLALoc = VLALoc;
   }
 
   bool NeedsScopeChecking() const {
@@ -1035,7 +1027,7 @@ public:
     return NonODRUsedCapturingExprs.count(CapturingVarExpr);
   }
   void removePotentialCapture(Expr *E) {
-    llvm::erase(PotentiallyCapturingExprs, E);
+    llvm::erase_value(PotentiallyCapturingExprs, E);
   }
   void clearPotentialCaptures() {
     PotentiallyCapturingExprs.clear();

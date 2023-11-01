@@ -18,7 +18,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
-#include <memory>
 
 using namespace llvm;
 

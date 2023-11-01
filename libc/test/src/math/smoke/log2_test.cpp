@@ -16,9 +16,11 @@
 #include <errno.h>
 #include <stdint.h>
 
-using LlvmLibcLog2Test = LIBC_NAMESPACE::testing::FPTest<double>;
+using LIBC_NAMESPACE::testing::tlog;
 
-TEST_F(LlvmLibcLog2Test, SpecialNumbers) {
+DECLARE_SPECIAL_CONSTANTS(double)
+
+TEST(LlvmLibcLog2Test, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::log2(aNaN));
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::log2(inf));
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log2(neg_inf), FE_INVALID);

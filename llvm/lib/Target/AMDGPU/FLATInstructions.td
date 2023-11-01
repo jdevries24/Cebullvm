@@ -871,8 +871,12 @@ defm GLOBAL_ATOMIC_DEC_X2 : FLAT_Global_Atomic_Pseudo <"global_atomic_dec_x2",
                               VReg_64, i64>;
 
 let SubtargetPredicate = HasGFX10_BEncoding in {
-  defm GLOBAL_ATOMIC_CSUB : FLAT_Global_Atomic_Pseudo <"global_atomic_csub",
+  defm GLOBAL_ATOMIC_CSUB : FLAT_Global_Atomic_Pseudo_RTN <"global_atomic_csub",
                                 VGPR_32, i32>;
+
+  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
+    defm GLOBAL_ATOMIC_CSUB : FLAT_Global_Atomic_Pseudo_NO_RTN <"global_atomic_csub",
+                                  VGPR_32, i32>;
 }
 
 defm GLOBAL_LOAD_LDS_UBYTE  : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_ubyte">;
@@ -1978,7 +1982,7 @@ multiclass FLAT_Real_SADDR_RTN_gfx10<bits<7> op> {
 multiclass FLAT_Real_ST_gfx10<bits<7> op> {
   def _ST_gfx10 :
     FLAT_Real_gfx10<op, !cast<FLAT_Pseudo>(NAME#"_ST")> {
-      let Inst{54-48} = EXEC_HI.Index;
+      let Inst{54-48} = !cast<int>(EXEC_HI.HWEncoding);
       let OtherPredicates = [HasFlatScratchSTMode];
     }
 }
@@ -2199,13 +2203,13 @@ multiclass FLAT_Aliases_gfx11<string ps, string opName, int renamed> {
 multiclass FLAT_Real_Base_gfx11<bits<7> op, string ps, string opName, int renamed = false> :
   FLAT_Aliases_gfx11<ps, opName, renamed> {
   def _gfx11 : FLAT_Real_gfx11<op, !cast<FLAT_Pseudo>(ps), opName> {
-    let Inst{54-48} = SGPR_NULL_gfx11plus.Index;
+    let Inst{54-48} = !cast<int>(SGPR_NULL_gfx11plus.HWEncoding);
   }
 }
 
 multiclass FLAT_Real_RTN_gfx11<bits<7> op, string ps, string opName> {
   def _RTN_gfx11 : FLAT_Real_gfx11<op, !cast<FLAT_Pseudo>(ps#"_RTN"), opName> {
-    let Inst{54-48} = SGPR_NULL_gfx11plus.Index;
+    let Inst{54-48} = !cast<int>(SGPR_NULL_gfx11plus.HWEncoding);
   }
 }
 
@@ -2219,7 +2223,7 @@ multiclass FLAT_Real_SADDR_RTN_gfx11<bits<7> op, string ps, string opName> {
 
 multiclass FLAT_Real_ST_gfx11<bits<7> op, string ps, string opName> {
   def _ST_gfx11 : FLAT_Real_gfx11<op, !cast<FLAT_Pseudo>(ps#"_ST"), opName> {
-    let Inst{54-48} = SGPR_NULL_gfx11plus.Index;
+    let Inst{54-48} = !cast<int>(SGPR_NULL_gfx11plus.HWEncoding);
     let OtherPredicates = [HasFlatScratchSTMode];
   }
 }

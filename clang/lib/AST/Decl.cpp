@@ -4932,7 +4932,7 @@ RecordDecl::RecordDecl(Kind DK, TagKind TK, const ASTContext &C,
   setHasNonTrivialToPrimitiveDestructCUnion(false);
   setHasNonTrivialToPrimitiveCopyCUnion(false);
   setParamDestroyedInCallee(false);
-  setArgPassingRestrictions(RecordArgPassingKind::CanPassInRegs);
+  setArgPassingRestrictions(APK_CanPassInRegs);
   setIsRandomized(false);
   setODRHash(0);
 }

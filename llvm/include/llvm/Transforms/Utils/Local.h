@@ -461,10 +461,6 @@ void dropDebugUsers(Instruction &I);
 void hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
                               BasicBlock *BB);
 
-/// Given a constant, create a debug information expression.
-DIExpression *getExpressionForConstant(DIBuilder &DIB, const Constant &C,
-                                       Type &Ty);
-
 //===----------------------------------------------------------------------===//
 //  Intrinsic pattern matching
 //

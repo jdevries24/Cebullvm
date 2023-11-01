@@ -30,7 +30,7 @@ static constexpr llvm::StringRef kPrintF16 = "printF16";
 static constexpr llvm::StringRef kPrintBF16 = "printBF16";
 static constexpr llvm::StringRef kPrintF32 = "printF32";
 static constexpr llvm::StringRef kPrintF64 = "printF64";
-static constexpr llvm::StringRef kPrintString = "printString";
+static constexpr llvm::StringRef kPrintStr = "puts";
 static constexpr llvm::StringRef kPrintOpen = "printOpen";
 static constexpr llvm::StringRef kPrintClose = "printClose";
 static constexpr llvm::StringRef kPrintComma = "printComma";
@@ -107,10 +107,9 @@ static LLVM::LLVMPointerType getVoidPtr(MLIRContext *context,
   return getCharPtr(context, opaquePointers);
 }
 
-LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintStringFn(
-    ModuleOp moduleOp, bool opaquePointers,
-    std::optional<StringRef> runtimeFunctionName) {
-  return lookupOrCreateFn(moduleOp, runtimeFunctionName.value_or(kPrintString),
+LLVM::LLVMFuncOp mlir::LLVM::lookupOrCreatePrintStrFn(ModuleOp moduleOp,
+                                                      bool opaquePointers) {
+  return lookupOrCreateFn(moduleOp, kPrintStr,
                           getCharPtr(moduleOp->getContext(), opaquePointers),
                           LLVM::LLVMVoidType::get(moduleOp->getContext()));
 }

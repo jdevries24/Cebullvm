@@ -148,7 +148,7 @@ For example:
 
 .. code-block:: bash
 
-   $ darker -r HEAD^ $(git diff --name-only --diff-filter=d HEAD^)
+   $ darker -r HEAD^ $(git diff --name-only HEAD^)
 
 Mechanical Source Issues
 ========================

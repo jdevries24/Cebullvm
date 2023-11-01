@@ -507,7 +507,8 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
 template <class ELFT>
 static std::string maybeReportDiscarded(Undefined &sym) {
   auto *file = dyn_cast_or_null<ObjFile<ELFT>>(sym.file);
-  if (!file || !sym.discardedSecIdx)
+  if (!file || !sym.discardedSecIdx ||
+      file->getSections()[sym.discardedSecIdx] != &InputSection::discarded)
     return "";
   ArrayRef<typename ELFT::Shdr> objSections =
       file->template getELFShdrs<ELFT>();
@@ -1574,8 +1575,7 @@ template <class ELFT> void elf::scanRelocations() {
         scanner.template scanSection<ELFT>(*sec);
       if (part.armExidx && part.armExidx->isLive())
         for (InputSection *sec : part.armExidx->exidxSections)
-          if (sec->isLive())
-            scanner.template scanSection<ELFT>(*sec);
+          scanner.template scanSection<ELFT>(*sec);
     }
   });
 }

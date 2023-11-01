@@ -34,7 +34,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const InputInfoList &Inputs,
                                    const ArgList &Args,
                                    const char *LinkingOutput) const {
-  const auto &ToolChain = static_cast<const Fuchsia &>(getToolChain());
+  const toolchains::Fuchsia &ToolChain =
+      static_cast<const toolchains::Fuchsia &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
 
   const llvm::Triple &Triple = ToolChain.getEffectiveTriple();
@@ -132,7 +133,8 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  Args.addAllArgs(CmdArgs, {options::OPT_L, options::OPT_u});
+  Args.AddAllArgs(CmdArgs, options::OPT_L);
+  Args.AddAllArgs(CmdArgs, options::OPT_u);
 
   ToolChain.AddFilePathLibArgs(Args, CmdArgs);
 

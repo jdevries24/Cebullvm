@@ -1999,7 +1999,6 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'amdgpu_cs_chain_preserve'
 ///   ::= 'amdgpu_kernel'
 ///   ::= 'tailcc'
-///   ::= 'm68k_rtdcc'
 ///   ::= 'cc' UINT
 ///
 bool LLParser::parseOptionalCallingConv(unsigned &CC) {
@@ -2068,7 +2067,6 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
     break;
   case lltok::kw_amdgpu_kernel:  CC = CallingConv::AMDGPU_KERNEL; break;
   case lltok::kw_tailcc:         CC = CallingConv::Tail; break;
-  case lltok::kw_m68k_rtdcc:     CC = CallingConv::M68k_RTD; break;
   case lltok::kw_cc: {
       Lex.Lex();
       return parseUInt32(CC);
@@ -6383,16 +6381,8 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   }
 
   // Casts.
-  case lltok::kw_zext: {
-    bool NonNeg = EatIfPresent(lltok::kw_nneg);
-    bool Res = parseCast(Inst, PFS, KeywordVal);
-    if (Res != 0)
-      return Res;
-    if (NonNeg)
-      Inst->setNonNeg();
-    return 0;
-  }
   case lltok::kw_trunc:
+  case lltok::kw_zext:
   case lltok::kw_sext:
   case lltok::kw_fptrunc:
   case lltok::kw_fpext:

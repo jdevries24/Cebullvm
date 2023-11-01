@@ -509,7 +509,7 @@ public:
       explicit ComponentPathNode(const DerivedTypeSpec &derived)
           : derived_{derived} {
         if constexpr (componentKind == ComponentKind::Scope) {
-          const Scope &scope{DEREF(derived.GetScope())};
+          const Scope &scope{DEREF(derived.scope())};
           nameIterator_ = scope.cbegin();
           nameEnd_ = scope.cend();
         } else {

@@ -594,8 +594,7 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
 
 void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
     llvm::Function *F, const AMDGPUFlatWorkGroupSizeAttr *FlatWGS,
-    const ReqdWorkGroupSizeAttr *ReqdWGS, int32_t *MinThreadsVal,
-    int32_t *MaxThreadsVal) {
+    const ReqdWorkGroupSizeAttr *ReqdWGS) {
   unsigned Min = 0;
   unsigned Max = 0;
   if (FlatWGS) {
@@ -608,13 +607,8 @@ void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
   if (Min != 0) {
     assert(Min <= Max && "Min must be less than or equal Max");
 
-    if (MinThreadsVal)
-      *MinThreadsVal = Min;
-    if (MaxThreadsVal)
-      *MaxThreadsVal = Max;
     std::string AttrVal = llvm::utostr(Min) + "," + llvm::utostr(Max);
-    if (F)
-      F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
+    F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
   } else
     assert(Max == 0 && "Max must be zero");
 }

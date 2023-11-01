@@ -539,8 +539,7 @@ bool SimplifyIndvar::eliminateTrunc(TruncInst *TI) {
   for (auto *ICI : ICmpUsers) {
     bool IsSwapped = L->isLoopInvariant(ICI->getOperand(0));
     auto *Op1 = IsSwapped ? ICI->getOperand(0) : ICI->getOperand(1);
-    IRBuilder<> Builder(ICI);
-    Value *Ext = nullptr;
+    Instruction *Ext = nullptr;
     // For signed/unsigned predicate, replace the old comparison with comparison
     // of immediate IV against sext/zext of the invariant argument. If we can
     // use either sext or zext (i.e. we are dealing with equality predicate),
@@ -551,18 +550,18 @@ bool SimplifyIndvar::eliminateTrunc(TruncInst *TI) {
     if (IsSwapped) Pred = ICmpInst::getSwappedPredicate(Pred);
     if (CanUseZExt(ICI)) {
       assert(DoesZExtCollapse && "Unprofitable zext?");
-      Ext = Builder.CreateZExt(Op1, IVTy, "zext");
+      Ext = new ZExtInst(Op1, IVTy, "zext", ICI);
       Pred = ICmpInst::getUnsignedPredicate(Pred);
     } else {
       assert(DoesSExtCollapse && "Unprofitable sext?");
-      Ext = Builder.CreateSExt(Op1, IVTy, "sext");
+      Ext = new SExtInst(Op1, IVTy, "sext", ICI);
       assert(Pred == ICmpInst::getSignedPredicate(Pred) && "Must be signed!");
     }
     bool Changed;
     L->makeLoopInvariant(Ext, Changed);
     (void)Changed;
-    auto *NewCmp = Builder.CreateICmp(Pred, IV, Ext);
-    ICI->replaceAllUsesWith(NewCmp);
+    ICmpInst *NewICI = new ICmpInst(ICI, Pred, IV, Ext);
+    ICI->replaceAllUsesWith(NewICI);
     DeadInsts.emplace_back(ICI);
   }
 
@@ -660,12 +659,12 @@ bool SimplifyIndvar::replaceFloatIVWithIntegerIV(Instruction *UseInst) {
   Instruction *IVOperand = cast<Instruction>(UseInst->getOperand(0));
   // Get the symbolic expression for this instruction.
   const SCEV *IV = SE->getSCEV(IVOperand);
-  int MaskBits;
+  unsigned MaskBits;
   if (UseInst->getOpcode() == CastInst::SIToFP)
-    MaskBits = (int)SE->getSignedRange(IV).getMinSignedBits();
+    MaskBits = SE->getSignedRange(IV).getMinSignedBits();
   else
-    MaskBits = (int)SE->getUnsignedRange(IV).getActiveBits();
-  int DestNumSigBits = UseInst->getType()->getFPMantissaWidth();
+    MaskBits = SE->getUnsignedRange(IV).getActiveBits();
+  unsigned DestNumSigBits = UseInst->getType()->getFPMantissaWidth();
   if (MaskBits <= DestNumSigBits) {
     for (User *U : UseInst->users()) {
       // Match for fptosi/fptoui of sitofp and with same type.

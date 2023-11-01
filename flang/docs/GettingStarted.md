@@ -53,7 +53,6 @@ First, create the root directory and `cd` into it.
 ```bash
 mkdir root
 cd root
-```
 
 Now clone the source:
 ```bash
@@ -234,7 +233,6 @@ cmake \
   -DCMAKE_CUDA_COMPILER=nvcc \
   -DCMAKE_CUDA_HOST_COMPILER=clang++ \
   ../runtime/
-
 make -j FortranRuntime
 ```
 
@@ -277,7 +275,7 @@ Normal `make -j check-flang` will work with such CMake configuration.
 ##### OpenMP target offload build
 Only Clang compiler is currently supported.
 
-```bash
+```
 cd llvm-project/flang
 rm -rf build_flang_runtime
 mkdir build_flang_runtime
@@ -289,7 +287,6 @@ cmake \
   -DCMAKE_CXX_COMPILER=clang++ \
   -DFLANG_OMP_DEVICE_ARCHITECTURES="all" \
   ../runtime/
-
 make -j FortranRuntime
 ```
 
@@ -341,7 +338,6 @@ and the GCC library and tools that were used to build clang++.
 
 CXX should include the full path to clang++
 or clang++ should be found on your PATH.
-
 ```bash
 export CXX=clang++
 ```

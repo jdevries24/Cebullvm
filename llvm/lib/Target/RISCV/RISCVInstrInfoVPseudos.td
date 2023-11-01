@@ -134,8 +134,7 @@ class PseudoToVInst<string PseudoInst> {
                         ["_M2", ""],
                         ["_M4", ""],
                         ["_M8", ""],
-                        ["_SE", ""],
-                        ["_RM", ""]
+                        ["_SE", ""]
                        ];
   string VInst = !foldl(PseudoInst, AffixSubsts, Acc, AffixSubst,
                         !subst(AffixSubst[0], AffixSubst[1], Acc));
@@ -1114,8 +1113,7 @@ class VPseudoUnaryNoMask_FRM<VReg RetClass,
                              string Constraint = ""> :
       Pseudo<(outs RetClass:$rd),
              (ins RetClass:$merge, OpClass:$rs2, ixlenimm:$frm,
-                  AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
-      RISCVVPseudo {
+                  AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -1133,8 +1131,7 @@ class VPseudoUnaryMask_FRM<VReg RetClass,
       Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
              (ins GetVRegNoV0<RetClass>.R:$merge, OpClass:$rs2,
                   VMaskOp:$vm, ixlenimm:$frm,
-                  AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
-      RISCVVPseudo {
+                  AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;

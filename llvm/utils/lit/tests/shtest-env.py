@@ -120,7 +120,6 @@
 # CHECK-NOT: {{^[^#]}}
 # CHECK: --
 
-# CHECK: Total Discovered Tests: 16
-# CHECK: Passed:  4 {{\([0-9]*\.[0-9]*%\)}}
-# CHECK: Failed: 12 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK: Passed:  4
+# CHECK: Failed: 12
 # CHECK-NOT: {{.}}

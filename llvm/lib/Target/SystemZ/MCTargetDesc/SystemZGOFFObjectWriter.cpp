@@ -8,7 +8,6 @@
 
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
-#include <memory>
 
 using namespace llvm;
 

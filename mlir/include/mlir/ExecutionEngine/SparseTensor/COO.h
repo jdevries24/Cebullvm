@@ -58,13 +58,21 @@ struct ElementLT final {
   const uint64_t rank;
 };
 
+/// The type of callback functions which receive an element.
+template <typename V>
+using ElementConsumer =
+    const std::function<void(const std::vector<uint64_t> &, V)> &;
+
 /// A memory-resident sparse tensor in coordinate-scheme representation
-/// (a collection of `Element`s). This data structure is used as an
-/// intermediate representation, e.g., for reading sparse tensors from
-/// external formats into memory.
+/// (a collection of `Element`s).  This data structure is used as
+/// an intermediate representation; e.g., for reading sparse tensors
+/// from external formats into memory, or for certain conversions between
+/// different `SparseTensorStorage` formats.
 template <typename V>
 class SparseTensorCOO final {
 public:
+  using const_iterator = typename std::vector<Element<V>>::const_iterator;
+
   /// Constructs a new coordinate-scheme sparse tensor with the given
   /// sizes and an optional initial storage capacity.
   explicit SparseTensorCOO(const std::vector<uint64_t> &dimSizes,
@@ -98,7 +106,7 @@ public:
   /// Returns the `operator<` closure object for the COO's element type.
   ElementLT<V> getElementLT() const { return ElementLT<V>(getRank()); }
 
-  /// Adds an element to the tensor.
+  /// Adds an element to the tensor. This method invalidates all iterators.
   void add(const std::vector<uint64_t> &dimCoords, V val) {
     const uint64_t *base = coordinates.data();
     const uint64_t size = coordinates.size();
@@ -127,9 +135,12 @@ public:
     elements.push_back(addedElem);
   }
 
+  const_iterator begin() const { return elements.cbegin(); }
+  const_iterator end() const { return elements.cend(); }
+
   /// Sorts elements lexicographically by coordinates. If a coordinate
   /// is mapped to multiple values, then the relative order of those
-  /// values is unspecified.
+  /// values is unspecified. This method invalidates all iterators.
   void sort() {
     if (isSorted)
       return;

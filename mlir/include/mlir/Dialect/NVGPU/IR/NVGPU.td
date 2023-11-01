@@ -522,8 +522,8 @@ def NVGPU_MBarrierInitOp : NVGPU_Op<"mbarrier.init", []> {
       nvgpu.mbarrier.init %barrier, %num_threads : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
     ```
   }];
-  let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$count, Index:$mbarId, Optional<I1>:$predicate);
-  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $count (`,` `predicate` `=` $predicate^)? attr-dict `:` type($barriers)";
+  let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$count, Index:$mbarId);
+  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $count attr-dict `:` type($barriers)";
 }
 
 def NVGPU_MBarrierTestWaitOp : NVGPU_Op<"mbarrier.test.wait", []> {
@@ -597,8 +597,8 @@ def NVGPU_MBarrierArriveExpectTxOp : NVGPU_Op<"mbarrier.arrive.expect_tx", []> {
       nvgpu.mbarrier.arrive.expect_tx %barrier, %ic0 : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
     ```
   }];
-  let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$txcount, Index:$mbarId, Optional<I1>:$predicate);
-  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $txcount  (`,` `predicate` `=` $predicate^)? attr-dict `:` type($barriers)";
+  let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$txcount, Index:$mbarId);
+  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $txcount  attr-dict `:` type($barriers)";
 }
 
 def NVGPU_MBarrierTryWaitParityOp : NVGPU_Op<"mbarrier.try_wait.parity", []> {
@@ -619,19 +619,7 @@ def NVGPU_MBarrierTryWaitParityOp : NVGPU_Op<"mbarrier.try_wait.parity", []> {
   let assemblyFormat = "$barriers `[` $mbarId `]` `,` $phase `,` $ticks attr-dict `:` type($barriers)";  
 }
 
-def NVGPU_TmaPrefetchOp : NVGPU_Op<"tma.prefetch.descriptor", []> {
-  let summary = "Prefetch given `nvgpu.tensormap.descriptor` ";
-  let description = [{
-    The Op brings the cache line containing the given `$tmaDescriptor` for 
-    subsequent use by the `tma.async.load` instruction.
-  }];
-  let arguments = (ins NVGPU_TensorMapDescriptor:$tensorMapDescriptor, Optional<I1>:$predicate);
-  let assemblyFormat = [{
-    $tensorMapDescriptor (`,` `predicate` `=` $predicate^)? attr-dict `:` type($tensorMapDescriptor)
-  }];
-}
-
-def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", [AttrSizedOperandSegments]> {
+def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", []> {
   let summary = "TMA asynchronous load";
   let description = [{
     The Op loads a tile memory region from global memory to shared memory by 
@@ -646,14 +634,10 @@ def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", [AttrSizedOperandSegments]
                        NVGPU_MBarrierGroup:$barriers,
                        NVGPU_TensorMapDescriptor:$tensorMapDescriptor,
                        Variadic<Index>:$coordinates, 
-                       Index:$mbarId,
-                       Optional<I1>:$predicate);
+                       Index:$mbarId);
   let assemblyFormat = [{
-    $tensorMapDescriptor `[` $coordinates `]` `,` $barriers `[` $mbarId `]` 
-      `to` $dst
-      (`,` `predicate` `=` $predicate^)? 
-      attr-dict `:` type($tensorMapDescriptor) `,` type($barriers) 
-      `->` type($dst)
+    $tensorMapDescriptor `[` $coordinates `]` `,` $barriers `[` $mbarId `]` `to` $dst
+      attr-dict `:` type($tensorMapDescriptor) `,` type($barriers) `->` type($dst)
   }];
   let hasVerifier = 1;
 
@@ -735,8 +719,8 @@ def NVGPU_WarpgroupMmaOp : NVGPU_Op<"warpgroup.mma"> {
                        DefaultValuedOptionalAttr<I32Attr, "1">:$waitGroup,
                        OptionalAttr<UnitAttr>:$transposeA,
                        OptionalAttr<UnitAttr>:$transposeB,
-                       NVGPU_WarpgroupAccumulator:$matrixC);
-  let results = (outs NVGPU_WarpgroupAccumulator:$matrixD);
+                       Variadic<NVGPU_WarpgroupAccumulator>:$matrixC);
+  let results = (outs Variadic<NVGPU_WarpgroupAccumulator>:$matrixD);
   let assemblyFormat = [{    
     $descriptorA`,` $descriptorB`,` $matrixC attr-dict
     `:` type($descriptorA) `,` type($descriptorB) `,` type($matrixC) `->` type($matrixD)
@@ -755,11 +739,11 @@ def NVGPU_WarpgroupMmaStoreOp : NVGPU_Op<"warpgroup.mma.store"> {
     Note that, the op must be run with warp group.
   }];
 
-  let arguments = (ins NVGPU_WarpgroupAccumulator:$matrixD,
+  let arguments = (ins Variadic<NVGPU_WarpgroupAccumulator>:$matrixD,
                        Arg<AnyMemRef, "", [MemWrite]>:$dstMemref);
   
   let assemblyFormat = [{
-    $matrixD `,` $dstMemref attr-dict `:` type($matrixD) `to` type($dstMemref)
+    `[` $matrixD `]` `,` $dstMemref attr-dict `:` type($matrixD) `to` type($dstMemref)
   }];
   let hasVerifier = 1;
 }
@@ -771,7 +755,7 @@ def NVGPU_WarpgroupMmaInitAccumulatorOp : NVGPU_Op<"warpgroup.mma.init.accumulat
     This Op generates and initializes the accumulator matrix for 
     `nvgpu.warpgroup.mma` op to perform matrix-multiply-and-accumulate.
   }];
-  let results = (outs NVGPU_WarpgroupAccumulator:$matrixC);
+  let results = (outs Variadic<NVGPU_WarpgroupAccumulator>:$matrixC);
   let assemblyFormat = "attr-dict `->` type($matrixC)";
   let hasVerifier = 1;
 }

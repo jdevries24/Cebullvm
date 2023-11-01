@@ -57,6 +57,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <map>
 #include <utility>
 #include <vector>
 
@@ -138,7 +139,7 @@ namespace {
     DenseSet<Register> RegsToClearKillFlags;
 
     using AllSuccsCache =
-        DenseMap<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 4>>;
+        std::map<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 4>>;
 
     /// DBG_VALUE pointer and flag. The flag is true if this DBG_VALUE is
     /// post-dominated by another DBG_VALUE of the same variable location.
@@ -159,15 +160,14 @@ namespace {
     /// current block.
     DenseSet<DebugVariable> SeenDbgVars;
 
-    DenseMap<std::pair<MachineBasicBlock *, MachineBasicBlock *>, bool>
+    std::map<std::pair<MachineBasicBlock *, MachineBasicBlock *>, bool>
         HasStoreCache;
-
-    DenseMap<std::pair<MachineBasicBlock *, MachineBasicBlock *>,
-             SmallVector<MachineInstr *>>
+    std::map<std::pair<MachineBasicBlock *, MachineBasicBlock *>,
+             std::vector<MachineInstr *>>
         StoreInstrCache;
 
     /// Cached BB's register pressure.
-    DenseMap<const MachineBasicBlock *, std::vector<unsigned>>
+    std::map<const MachineBasicBlock *, std::vector<unsigned>>
         CachedRegisterPressure;
 
     bool EnableSinkAndFold;
@@ -539,10 +539,9 @@ bool MachineSinking::PerformSinkAndFold(MachineInstr &MI,
       New = TII->emitLdStWithAddr(*SinkDst, MaybeAM);
     }
     LLVM_DEBUG(dbgs() << "yielding"; New->dump());
-    // Clear the StoreInstrCache, since we may invalidate it by erasing.
-    if (SinkDst->mayStore() && !SinkDst->hasOrderedMemoryRef())
-      StoreInstrCache.clear();
     SinkDst->eraseFromParent();
+    // Clear the StoreInstrCache, since we may have invalidated it by erasing.
+    StoreInstrCache.clear();
   }
 
   // Collect operands that need to be cleaned up because the registers no longer
@@ -1430,11 +1429,11 @@ bool MachineSinking::hasStoreBetween(MachineBasicBlock *From,
 
   // Does these two blocks pair be queried before and have a definite cached
   // result?
-  if (auto It = HasStoreCache.find(BlockPair); It != HasStoreCache.end())
-    return It->second;
+  if (HasStoreCache.find(BlockPair) != HasStoreCache.end())
+    return HasStoreCache[BlockPair];
 
-  if (auto It = StoreInstrCache.find(BlockPair); It != StoreInstrCache.end())
-    return llvm::any_of(It->second, [&](MachineInstr *I) {
+  if (StoreInstrCache.find(BlockPair) != StoreInstrCache.end())
+    return llvm::any_of(StoreInstrCache[BlockPair], [&](MachineInstr *I) {
       return I->mayAlias(AA, MI, false);
     });
 

@@ -251,12 +251,10 @@ FILE *DerivedType::Dump(FILE *f) const {
   std::fprintf(
       f, "\n  special descriptor (byteSize 0x%zx): ", special_.byteSize);
   specialDesc.Dump(f);
-  if (specialDesc.IsAllocated()) {
-    std::size_t specials{specialDesc.Elements()};
-    for (std::size_t j{0}; j < specials; ++j) {
-      std::fprintf(f, "  [%3zd] ", j);
-      specialDesc.ZeroBasedIndexedElement<SpecialBinding>(j)->Dump(f);
-    }
+  std::size_t specials{specialDesc.Elements()};
+  for (std::size_t j{0}; j < specials; ++j) {
+    std::fprintf(f, "  [%3zd] ", j);
+    specialDesc.ZeroBasedIndexedElement<SpecialBinding>(j)->Dump(f);
   }
   return f;
 }

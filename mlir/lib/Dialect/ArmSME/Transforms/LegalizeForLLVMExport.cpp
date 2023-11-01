@@ -179,7 +179,12 @@ struct LoadTileSliceToArmSMELowering
         loc, rewriter.getI32Type(), tileSlice);
 
     // Create all active predicate mask.
-    auto maskOp = loadTileSliceOp.getMask();
+    auto one = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getI1Type(),
+        rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
+    auto predTy = VectorType::get(tileType.getShape()[0], rewriter.getI1Type(),
+                                  /*scalableDims=*/{true});
+    auto allActiveMask = rewriter.create<vector::SplatOp>(loc, predTy, one);
 
     auto tileI32 = castTileIDToI32(tile, loc, rewriter);
     arm_sme::TileSliceLayout layout = loadTileSliceOp.getLayout();
@@ -190,24 +195,24 @@ struct LoadTileSliceToArmSMELowering
       default:
         llvm_unreachable("unexpected element type!");
       case 8:
-        rewriter.create<arm_sme::aarch64_sme_ld1b_horiz>(loc, maskOp, ptr,
-                                                         tileI32, tileSliceI32);
+        rewriter.create<arm_sme::aarch64_sme_ld1b_horiz>(
+            loc, allActiveMask, ptr, tileI32, tileSliceI32);
         break;
       case 16:
-        rewriter.create<arm_sme::aarch64_sme_ld1h_horiz>(loc, maskOp, ptr,
-                                                         tileI32, tileSliceI32);
+        rewriter.create<arm_sme::aarch64_sme_ld1h_horiz>(
+            loc, allActiveMask, ptr, tileI32, tileSliceI32);
         break;
       case 32:
-        rewriter.create<arm_sme::aarch64_sme_ld1w_horiz>(loc, maskOp, ptr,
-                                                         tileI32, tileSliceI32);
+        rewriter.create<arm_sme::aarch64_sme_ld1w_horiz>(
+            loc, allActiveMask, ptr, tileI32, tileSliceI32);
         break;
       case 64:
-        rewriter.create<arm_sme::aarch64_sme_ld1d_horiz>(loc, maskOp, ptr,
-                                                         tileI32, tileSliceI32);
+        rewriter.create<arm_sme::aarch64_sme_ld1d_horiz>(
+            loc, allActiveMask, ptr, tileI32, tileSliceI32);
         break;
       case 128:
-        rewriter.create<arm_sme::aarch64_sme_ld1q_horiz>(loc, maskOp, ptr,
-                                                         tileI32, tileSliceI32);
+        rewriter.create<arm_sme::aarch64_sme_ld1q_horiz>(
+            loc, allActiveMask, ptr, tileI32, tileSliceI32);
         break;
       }
     } else {
@@ -215,23 +220,23 @@ struct LoadTileSliceToArmSMELowering
       default:
         llvm_unreachable("unexpected element type!");
       case 8:
-        rewriter.create<arm_sme::aarch64_sme_ld1b_vert>(loc, maskOp, ptr,
+        rewriter.create<arm_sme::aarch64_sme_ld1b_vert>(loc, allActiveMask, ptr,
                                                         tileI32, tileSliceI32);
         break;
       case 16:
-        rewriter.create<arm_sme::aarch64_sme_ld1h_vert>(loc, maskOp, ptr,
+        rewriter.create<arm_sme::aarch64_sme_ld1h_vert>(loc, allActiveMask, ptr,
                                                         tileI32, tileSliceI32);
         break;
       case 32:
-        rewriter.create<arm_sme::aarch64_sme_ld1w_vert>(loc, maskOp, ptr,
+        rewriter.create<arm_sme::aarch64_sme_ld1w_vert>(loc, allActiveMask, ptr,
                                                         tileI32, tileSliceI32);
         break;
       case 64:
-        rewriter.create<arm_sme::aarch64_sme_ld1d_vert>(loc, maskOp, ptr,
+        rewriter.create<arm_sme::aarch64_sme_ld1d_vert>(loc, allActiveMask, ptr,
                                                         tileI32, tileSliceI32);
         break;
       case 128:
-        rewriter.create<arm_sme::aarch64_sme_ld1q_vert>(loc, maskOp, ptr,
+        rewriter.create<arm_sme::aarch64_sme_ld1q_vert>(loc, allActiveMask, ptr,
                                                         tileI32, tileSliceI32);
         break;
       }
@@ -345,7 +350,8 @@ struct StoreTileSliceToArmSMELowering
   }
 };
 
-/// Lower `arm_sme.move_vector_to_tile_slice` to SME intrinsics.
+/// Lower `arm_sme.move_vector_to_tile_slice` to SME intrinsics. Only horizontal
+/// tile slices are currently supported.
 struct MoveVectorToTileSliceToArmSMELowering
     : public ConvertOpToLLVMPattern<arm_sme::MoveVectorToTileSliceOp> {
   using ConvertOpToLLVMPattern<
@@ -382,19 +388,10 @@ struct MoveVectorToTileSliceToArmSMELowering
 
     auto tileI32 = castTileIDToI32(tile, loc, rewriter);
 
-    // Create 'arm_sme.intr.write.(horiz|vert)' to write vector to tile slice.
-    switch (moveVectorToTileSliceOp.getLayout()) {
-    case arm_sme::TileSliceLayout::Horizontal:
-      rewriter.create<arm_sme::aarch64_sme_write_horiz>(
-          loc, tileI32, tileSliceI32, allActiveMask,
-          moveVectorToTileSliceOp.getVector());
-      break;
-    case arm_sme::TileSliceLayout::Vertical:
-      rewriter.create<arm_sme::aarch64_sme_write_vert>(
-          loc, tileI32, tileSliceI32, allActiveMask,
-          moveVectorToTileSliceOp.getVector());
-      break;
-    }
+    // Create 'arm_sme.intr.write.horiz' to write vector to tile slice.
+    rewriter.create<arm_sme::aarch64_sme_write_horiz>(
+        loc, tileI32, tileSliceI32, allActiveMask,
+        moveVectorToTileSliceOp.getVector());
 
     // Intrinsic has no result, replace 'arm_sme.move_vector_to_tile_slice' with
     // 'arm_sme.cast_tile_to_vector' to preserve dataflow.
@@ -405,7 +402,8 @@ struct MoveVectorToTileSliceToArmSMELowering
   }
 };
 
-/// Lower `arm_sme.move_tile_slice_to_vector` to SME intrinsics.
+/// Lower `arm_sme.move_tile_slice_to_vector` to SME intrinsics. Only horizontal
+/// tile slices are currently supported.
 struct MoveTileSliceToVectorArmSMELowering
     : public ConvertOpToLLVMPattern<arm_sme::MoveTileSliceToVectorOp> {
   using ConvertOpToLLVMPattern<
@@ -437,29 +435,20 @@ struct MoveTileSliceToVectorArmSMELowering
     auto sliceIndexI32 = rewriter.create<arith::IndexCastOp>(
         loc, rewriter.getI32Type(), sliceIndex);
 
-    // Create 'arm_sme.intr.read.(horiz|vert)' to extract the tile slice.
-    switch (moveTileSliceToVector.getLayout()) {
-    case arm_sme::TileSliceLayout::Horizontal:
-      rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_read_horiz>(
-          moveTileSliceToVector, sliceType, zeroVector, allTruePredicate,
-          tileIdI32, sliceIndexI32);
-      break;
-    case arm_sme::TileSliceLayout::Vertical:
-      rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_read_vert>(
-          moveTileSliceToVector, sliceType, zeroVector, allTruePredicate,
-          tileIdI32, sliceIndexI32);
-      break;
-    }
+    // Create 'arm_sme.intr.read.horiz' to extract the tile slice.
+    rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_read_horiz>(
+        moveTileSliceToVector, sliceType, zeroVector, allTruePredicate,
+        tileIdI32, sliceIndexI32);
 
     return success();
   }
 };
 
-/// Lower `arm_sme.outerproduct` to SME MOPA intrinsics.
+/// Lower `vector.outerproduct` to SME MOPA intrinsics.
 ///
 /// Example:
 ///
-///   %0 = arm_sme.outerproduct %lhs, %rhs acc(%acc)
+///   %0 = vector.outerproduct %lhs, %rhs, %acc {kind = #vector.kind<add>}
 ///     : vector<[4]xf32>, vector<[4]xf32>
 ///
 /// is converted to:
@@ -469,13 +458,13 @@ struct MoveTileSliceToVectorArmSMELowering
 ///        vector<[4]xf32>) -> ()
 ///
 /// Currently only supports FMOPA and BFMOPA (non-widening).
-struct OuterProductOpConversion
-    : public ConvertOpToLLVMPattern<arm_sme::OuterProductOp> {
-  using ConvertOpToLLVMPattern<arm_sme::OuterProductOp>::ConvertOpToLLVMPattern;
+struct VectorOuterProductToArmSMELowering
+    : public ConvertOpToLLVMPattern<vector::OuterProductOp> {
+  using ConvertOpToLLVMPattern<vector::OuterProductOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(arm_sme::OuterProductOp outerProductOp,
-                  arm_sme::OuterProductOp::Adaptor adaptor,
+  matchAndRewrite(vector::OuterProductOp outerProductOp,
+                  vector::OuterProductOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto isSupportedType = [](VectorType vectorType) {
       // TODO: the FP outer product instruction variants are predicated on
@@ -507,13 +496,24 @@ struct OuterProductOpConversion
       return true;
     };
 
-    // TODO: Support CombiningKind::Sub for outer products.
-    if (outerProductOp.getKind() != CombiningKind::Add)
-      return outerProductOp.emitError("unsupported kind");
-
-    auto resultVectorType = outerProductOp.getResultType();
+    auto resultVectorType = outerProductOp.getResultVectorType();
     if (!isSupportedType(resultVectorType))
       return outerProductOp.emitError("unsupported type");
+
+    vector::CombiningKind kind = outerProductOp.getKind();
+    if (kind != vector::CombiningKind::ADD)
+      // TODO: support subtract.
+      return outerProductOp.emitError("unsupported kind");
+
+    auto maskableOp =
+        cast<vector::MaskableOpInterface>(outerProductOp.getOperation());
+    if (maskableOp.isMasked())
+      // TODO: support masking.
+      return outerProductOp.emitError("masking is currently unsupported");
+
+    if (!isa<VectorType>(outerProductOp.getOperandTypeRHS()))
+      // AXPY operation not suited for SME.
+      return failure();
 
     auto loc = outerProductOp.getLoc();
 
@@ -526,24 +526,21 @@ struct OuterProductOpConversion
     auto tileId = rewriter.create<arm_sme::CastVectorToTile>(
         loc, rewriter.getIntegerType(elementWidth), acc);
 
+    // Create all active predicate mask.
+    auto one = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getI1Type(),
+        rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
+    auto predTy =
+        VectorType::get(resultVectorType.getShape()[0], rewriter.getI1Type(),
+                        /*scalableDims=*/{true});
+    auto allActiveMask = rewriter.create<vector::SplatOp>(loc, predTy, one);
+
     auto tileI32 = castTileIDToI32(tileId, loc, rewriter);
 
-    Value lhsMask = outerProductOp.getLhsMask();
-    Value rhsMask = outerProductOp.getRhsMask();
-
-    if (!lhsMask || !rhsMask) {
-      auto predTy =
-          outerProductOp.getLhsType().cloneWith({}, rewriter.getI1Type());
-      Value allActiveMask = rewriter.create<arith::ConstantOp>(
-          loc, DenseElementsAttr::get(predTy, true));
-      lhsMask = allActiveMask;
-      rhsMask = allActiveMask;
-    }
-
     // Create 'arm_sme.intr.mopa' outer product intrinsic.
-    rewriter.create<arm_sme::aarch64_sme_mopa>(loc, tileI32, lhsMask, rhsMask,
-                                               outerProductOp.getLhs(),
-                                               outerProductOp.getRhs());
+    rewriter.create<arm_sme::aarch64_sme_mopa>(
+        loc, tileI32, allActiveMask, allActiveMask, outerProductOp.getLhs(),
+        outerProductOp.getRhs());
 
     // Create `CastTileToVectorOp` to use as the output.
     rewriter.replaceOpWithNewOp<arm_sme::CastTileToVector>(
@@ -683,8 +680,7 @@ void mlir::configureArmSMELegalizeForExportTarget(
       arm_sme::aarch64_sme_st1b_vert, arm_sme::aarch64_sme_st1h_vert,
       arm_sme::aarch64_sme_st1w_vert, arm_sme::aarch64_sme_st1d_vert,
       arm_sme::aarch64_sme_st1q_vert, arm_sme::aarch64_sme_read_horiz,
-      arm_sme::aarch64_sme_read_vert, arm_sme::aarch64_sme_write_horiz,
-      arm_sme::aarch64_sme_write_vert, arm_sme::aarch64_sme_mopa,
+      arm_sme::aarch64_sme_write_horiz, arm_sme::aarch64_sme_mopa,
       arm_sme::aarch64_sme_za_enable, arm_sme::aarch64_sme_za_disable>();
   target.addLegalOp<GetTileID>();
   target.addIllegalOp<vector::OuterProductOp>();
@@ -720,6 +716,6 @@ void mlir::populateArmSMELegalizeForLLVMExportPatterns(
   patterns.add<
       LoadTileSliceToArmSMELowering, MoveTileSliceToVectorArmSMELowering,
       MoveVectorToTileSliceToArmSMELowering, StoreTileSliceToArmSMELowering,
-      OuterProductOpConversion, ZeroOpConversion, VectorExtractToArmSMELowering,
-      VectorInsertToArmSMELowering>(converter);
+      VectorOuterProductToArmSMELowering, ZeroOpConversion,
+      VectorExtractToArmSMELowering, VectorInsertToArmSMELowering>(converter);
 }

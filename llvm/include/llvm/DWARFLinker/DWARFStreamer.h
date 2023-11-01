@@ -163,7 +163,7 @@ public:
                StringRef Bytes) override;
 
   /// Emit DWARF debug names.
-  void emitDebugNames(DWARF5AccelTable &Table) override;
+  void emitDebugNames(AccelTable<DWARF5AccelTableStaticData> &Table) override;
 
   /// Emit Apple namespaces accelerator table.
   void emitAppleNamespaces(

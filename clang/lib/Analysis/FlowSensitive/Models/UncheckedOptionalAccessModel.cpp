@@ -413,7 +413,7 @@ bool isEmptyOptional(const Value &OptionalVal, const Environment &Env) {
   auto *HasValueVal =
       cast_or_null<BoolValue>(OptionalVal.getProperty("has_value"));
   return HasValueVal != nullptr &&
-         Env.proves(Env.arena().makeNot(HasValueVal->formula()));
+         Env.flowConditionImplies(Env.arena().makeNot(HasValueVal->formula()));
 }
 
 /// Returns true if and only if `OptionalVal` is initialized and known to be
@@ -421,7 +421,8 @@ bool isEmptyOptional(const Value &OptionalVal, const Environment &Env) {
 bool isNonEmptyOptional(const Value &OptionalVal, const Environment &Env) {
   auto *HasValueVal =
       cast_or_null<BoolValue>(OptionalVal.getProperty("has_value"));
-  return HasValueVal != nullptr && Env.proves(HasValueVal->formula());
+  return HasValueVal != nullptr &&
+         Env.flowConditionImplies(HasValueVal->formula());
 }
 
 Value *getValueBehindPossiblePointer(const Expr &E, const Environment &Env) {
@@ -489,8 +490,8 @@ void transferValueOrImpl(
   if (HasValueVal == nullptr)
     return;
 
-  Env.assume(ModelPred(Env, forceBoolValue(Env, *ValueOrPredExpr),
-                       HasValueVal->formula()));
+  Env.addToFlowCondition(ModelPred(Env, forceBoolValue(Env, *ValueOrPredExpr),
+                                   HasValueVal->formula()));
 }
 
 void transferValueOrStringEmptyCall(const clang::Expr *ComparisonExpr,
@@ -598,7 +599,7 @@ void transferAssignment(const CXXOperatorCallExpr *E, BoolValue &HasValueVal,
                         LatticeTransferState &State) {
   assert(E->getNumArgs() > 0);
 
-  if (auto *Loc = cast_or_null<RecordStorageLocation>(
+  if (auto *Loc = cast<RecordStorageLocation>(
           State.Env.getStorageLocation(*E->getArg(0)))) {
     createOptionalValue(*Loc, HasValueVal, State.Env);
 
@@ -716,8 +717,8 @@ void transferOptionalAndOptionalCmp(const clang::CXXOperatorCallExpr *CmpExpr,
     if (auto *RHasVal = getHasValue(Env, Env.getValue(*CmpExpr->getArg(1)))) {
       if (CmpExpr->getOperator() == clang::OO_ExclaimEqual)
         CmpValue = &A.makeNot(*CmpValue);
-      Env.assume(evaluateEquality(A, *CmpValue, LHasVal->formula(),
-                                  RHasVal->formula()));
+      Env.addToFlowCondition(evaluateEquality(A, *CmpValue, LHasVal->formula(),
+                                              RHasVal->formula()));
     }
 }
 
@@ -728,7 +729,7 @@ void transferOptionalAndValueCmp(const clang::CXXOperatorCallExpr *CmpExpr,
   if (auto *HasVal = getHasValue(Env, Env.getValue(*E))) {
     if (CmpExpr->getOperator() == clang::OO_ExclaimEqual)
       CmpValue = &A.makeNot(*CmpValue);
-    Env.assume(
+    Env.addToFlowCondition(
         evaluateEquality(A, *CmpValue, HasVal->formula(), A.makeLiteral(true)));
   }
 }
@@ -916,7 +917,7 @@ llvm::SmallVector<SourceLocation> diagnoseUnwrapCall(const Expr *ObjectExpr,
   if (auto *OptionalVal = getValueBehindPossiblePointer(*ObjectExpr, Env)) {
     auto *Prop = OptionalVal->getProperty("has_value");
     if (auto *HasValueVal = cast_or_null<BoolValue>(Prop)) {
-      if (Env.proves(HasValueVal->formula()))
+      if (Env.flowConditionImplies(HasValueVal->formula()))
         return {};
     }
   }
@@ -1003,13 +1004,14 @@ bool UncheckedOptionalAccessModel::merge(QualType Type, const Value &Val1,
   bool MustNonEmpty1 = isNonEmptyOptional(Val1, Env1);
   bool MustNonEmpty2 = isNonEmptyOptional(Val2, Env2);
   if (MustNonEmpty1 && MustNonEmpty2)
-    MergedEnv.assume(HasValueVal.formula());
+    MergedEnv.addToFlowCondition(HasValueVal.formula());
   else if (
       // Only make the costly calls to `isEmptyOptional` if we got "unknown"
       // (false) for both calls to `isNonEmptyOptional`.
       !MustNonEmpty1 && !MustNonEmpty2 && isEmptyOptional(Val1, Env1) &&
       isEmptyOptional(Val2, Env2))
-    MergedEnv.assume(MergedEnv.arena().makeNot(HasValueVal.formula()));
+    MergedEnv.addToFlowCondition(
+        MergedEnv.arena().makeNot(HasValueVal.formula()));
   setHasValue(MergedVal, HasValueVal);
   return true;
 }

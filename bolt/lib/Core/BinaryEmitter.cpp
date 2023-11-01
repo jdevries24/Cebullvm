@@ -309,7 +309,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     // tentative layout.
     Section->ensureMinAlignment(Align(opts::AlignFunctions));
 
-    Streamer.emitCodeAlignment(Function.getMinAlign(), &*BC.STI);
+    Streamer.emitCodeAlignment(Align(BinaryFunction::MinAlign), &*BC.STI);
     uint16_t MaxAlignBytes = FF.isSplitFragment()
                                  ? Function.getMaxColdAlignmentBytes()
                                  : Function.getMaxAlignmentBytes();

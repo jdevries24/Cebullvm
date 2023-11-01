@@ -40,11 +40,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     DCHECK_LT(ClassId, NumClasses);
     PerClass *C = &PerClassArray[ClassId];
     if (C->Count == 0) {
-      initCacheMaybe(C);
-
-      // Refill half of the number of max cached.
-      DCHECK_GT(C->MaxCount / 2, 0U);
-      if (UNLIKELY(!refill(C, ClassId, C->MaxCount / 2)))
+      if (UNLIKELY(!refill(C, ClassId)))
         return nullptr;
       DCHECK_GT(C->Count, 0);
     }
@@ -177,10 +173,14 @@ private:
       deallocate(BatchClassId, B);
   }
 
-  NOINLINE bool refill(PerClass *C, uptr ClassId, u16 MaxRefill) {
+  NOINLINE bool refill(PerClass *C, uptr ClassId) {
+    initCacheMaybe(C);
+
+    // TODO(chiahungduan): Pass the max number cached for each size class.
     const u16 NumBlocksRefilled =
-        Allocator->popBlocks(this, ClassId, C->Chunks, MaxRefill);
-    DCHECK_LE(NumBlocksRefilled, MaxRefill);
+        Allocator->popBlocks(this, ClassId, C->Chunks);
+    DCHECK_LE(NumBlocksRefilled,
+              getMaxCached(SizeClassAllocator::getSizeByClassId(ClassId)));
     C->Count = static_cast<u16>(C->Count + NumBlocksRefilled);
     return NumBlocksRefilled != 0;
   }

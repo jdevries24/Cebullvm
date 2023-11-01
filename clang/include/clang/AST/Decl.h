@@ -4059,29 +4059,6 @@ public:
   static bool classofKind(Kind K) { return K == Enum; }
 };
 
-/// Enum that represents the different ways arguments are passed to and
-/// returned from function calls. This takes into account the target-specific
-/// and version-specific rules along with the rules determined by the
-/// language.
-enum class RecordArgPassingKind {
-  /// The argument of this type can be passed directly in registers.
-  CanPassInRegs,
-
-  /// The argument of this type cannot be passed directly in registers.
-  /// Records containing this type as a subobject are not forced to be passed
-  /// indirectly. This value is used only in C++. This value is required by
-  /// C++ because, in uncommon situations, it is possible for a class to have
-  /// only trivial copy/move constructors even when one of its subobjects has
-  /// a non-trivial copy/move constructor (if e.g. the corresponding copy/move
-  /// constructor in the derived class is deleted).
-  CannotPassInRegs,
-
-  /// The argument of this type cannot be passed directly in registers.
-  /// Records containing this type as a subobject are forced to be passed
-  /// indirectly.
-  CanNeverPassInRegs
-};
-
 /// Represents a struct/union/class.  For example:
 ///   struct X;                  // Forward declaration, no "body".
 ///   union Y { int A, B; };     // Has body with members A and B (FieldDecls).
@@ -4092,6 +4069,28 @@ class RecordDecl : public TagDecl {
 public:
   friend class DeclContext;
   friend class ASTDeclReader;
+  /// Enum that represents the different ways arguments are passed to and
+  /// returned from function calls. This takes into account the target-specific
+  /// and version-specific rules along with the rules determined by the
+  /// language.
+  enum ArgPassingKind : unsigned {
+    /// The argument of this type can be passed directly in registers.
+    APK_CanPassInRegs,
+
+    /// The argument of this type cannot be passed directly in registers.
+    /// Records containing this type as a subobject are not forced to be passed
+    /// indirectly. This value is used only in C++. This value is required by
+    /// C++ because, in uncommon situations, it is possible for a class to have
+    /// only trivial copy/move constructors even when one of its subobjects has
+    /// a non-trivial copy/move constructor (if e.g. the corresponding copy/move
+    /// constructor in the derived class is deleted).
+    APK_CannotPassInRegs,
+
+    /// The argument of this type cannot be passed directly in registers.
+    /// Records containing this type as a subobject are forced to be passed
+    /// indirectly.
+    APK_CanNeverPassInRegs
+  };
 
 protected:
   RecordDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
@@ -4216,16 +4215,15 @@ public:
   /// it must have at least one trivial, non-deleted copy or move constructor.
   /// FIXME: This should be set as part of completeDefinition.
   bool canPassInRegisters() const {
-    return getArgPassingRestrictions() == RecordArgPassingKind::CanPassInRegs;
+    return getArgPassingRestrictions() == APK_CanPassInRegs;
   }
 
-  RecordArgPassingKind getArgPassingRestrictions() const {
-    return static_cast<RecordArgPassingKind>(
-        RecordDeclBits.ArgPassingRestrictions);
+  ArgPassingKind getArgPassingRestrictions() const {
+    return static_cast<ArgPassingKind>(RecordDeclBits.ArgPassingRestrictions);
   }
 
-  void setArgPassingRestrictions(RecordArgPassingKind Kind) {
-    RecordDeclBits.ArgPassingRestrictions = llvm::to_underlying(Kind);
+  void setArgPassingRestrictions(ArgPassingKind Kind) {
+    RecordDeclBits.ArgPassingRestrictions = Kind;
   }
 
   bool isParamDestroyedInCallee() const {
@@ -4302,30 +4300,6 @@ public:
   // Whether there are any fields (non-static data members) in this record.
   bool field_empty() const {
     return field_begin() == field_end();
-  }
-
-  FieldDecl *getLastField() {
-    FieldDecl *FD = nullptr;
-    for (FieldDecl *Field : fields())
-      FD = Field;
-    return FD;
-  }
-  const FieldDecl *getLastField() const {
-    return const_cast<RecordDecl *>(this)->getLastField();
-  }
-
-  template <typename Functor>
-  const FieldDecl *findFieldIf(Functor &Pred) const {
-    for (const Decl *D : decls()) {
-      if (const auto *FD = dyn_cast<FieldDecl>(D); FD && Pred(FD))
-        return FD;
-
-      if (const auto *RD = dyn_cast<RecordDecl>(D))
-        if (const FieldDecl *FD = RD->findFieldIf(Pred))
-          return FD;
-    }
-
-    return nullptr;
   }
 
   /// Note that the definition of this type is now complete.

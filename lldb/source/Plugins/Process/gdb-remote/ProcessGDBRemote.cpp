@@ -1642,22 +1642,9 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
   }
 
   ThreadGDBRemote *gdb_thread = static_cast<ThreadGDBRemote *>(thread_sp.get());
-  RegisterContextSP reg_ctx_sp(gdb_thread->GetRegisterContext());
+  RegisterContextSP gdb_reg_ctx_sp(gdb_thread->GetRegisterContext());
 
-  reg_ctx_sp->InvalidateIfNeeded(true);
-
-  // AArch64 SVE/SME specific code below updates SVE and ZA register sizes and
-  // offsets if value of VG or SVG registers has changed since last stop.
-  const ArchSpec &arch = GetTarget().GetArchitecture();
-  if (arch.IsValid() && arch.GetTriple().isAArch64()) {
-    GDBRemoteRegisterContext *gdb_remote_reg_ctx =
-        static_cast<GDBRemoteRegisterContext *>(reg_ctx_sp.get());
-
-    if (gdb_remote_reg_ctx) {
-      gdb_remote_reg_ctx->AArch64Reconfigure();
-      gdb_remote_reg_ctx->InvalidateAllRegisters();
-    }
-  }
+  gdb_reg_ctx_sp->InvalidateIfNeeded(true);
 
   auto iter = std::find(m_thread_ids.begin(), m_thread_ids.end(), tid);
   if (iter != m_thread_ids.end())
@@ -1668,10 +1655,25 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
     WritableDataBufferSP buffer_sp(
         new DataBufferHeap(reg_value_extractor.GetStringRef().size() / 2, 0));
     reg_value_extractor.GetHexBytes(buffer_sp->GetData(), '\xcc');
-    uint32_t lldb_regnum = reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
+    uint32_t lldb_regnum = gdb_reg_ctx_sp->ConvertRegisterKindToRegisterNumber(
         eRegisterKindProcessPlugin, pair.first);
     gdb_thread->PrivateSetRegisterValue(lldb_regnum, buffer_sp->GetData());
   }
+
+  // AArch64 SVE/SME specific code below updates SVE and ZA register sizes and
+  // offsets if value of VG or SVG registers has changed since last stop.
+  const ArchSpec &arch = GetTarget().GetArchitecture();
+  if (arch.IsValid() && arch.GetTriple().isAArch64()) {
+    GDBRemoteRegisterContext *reg_ctx_sp =
+        static_cast<GDBRemoteRegisterContext *>(
+            gdb_thread->GetRegisterContext().get());
+
+    if (reg_ctx_sp) {
+      reg_ctx_sp->AArch64Reconfigure();
+      reg_ctx_sp->InvalidateAllRegisters();
+    }
+  }
+
   thread_sp->SetName(thread_name.empty() ? nullptr : thread_name.c_str());
 
   gdb_thread->SetThreadDispatchQAddr(thread_dispatch_qaddr);
@@ -5177,7 +5179,7 @@ public:
 
   Options *GetOptions() override { return &m_option_group; }
 
-  void DoExecute(Args &command, CommandReturnObject &result) override {
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
     if (argc == 0) {
       ProcessGDBRemote *process =
@@ -5199,13 +5201,14 @@ public:
             num_packets, max_send, max_recv, k_recv_amount, json,
             output_stream_sp ? *output_stream_sp : result.GetOutputStream());
         result.SetStatus(eReturnStatusSuccessFinishResult);
-        return;
+        return true;
       }
     } else {
       result.AppendErrorWithFormat("'%s' takes no arguments",
                                    m_cmd_name.c_str());
     }
     result.SetStatus(eReturnStatusFailed);
+    return false;
   }
 
 protected:
@@ -5225,15 +5228,16 @@ public:
 
   ~CommandObjectProcessGDBRemotePacketHistory() override = default;
 
-  void DoExecute(Args &command, CommandReturnObject &result) override {
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
     ProcessGDBRemote *process =
         (ProcessGDBRemote *)m_interpreter.GetExecutionContext().GetProcessPtr();
     if (process) {
       process->DumpPluginHistory(result.GetOutputStream());
       result.SetStatus(eReturnStatusSuccessFinishResult);
-      return;
+      return true;
     }
     result.SetStatus(eReturnStatusFailed);
+    return false;
   }
 };
 
@@ -5251,14 +5255,14 @@ public:
 
   ~CommandObjectProcessGDBRemotePacketXferSize() override = default;
 
-  void DoExecute(Args &command, CommandReturnObject &result) override {
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
     if (argc == 0) {
       result.AppendErrorWithFormat("'%s' takes an argument to specify the max "
                                    "amount to be transferred when "
                                    "reading/writing",
                                    m_cmd_name.c_str());
-      return;
+      return false;
     }
 
     ProcessGDBRemote *process =
@@ -5270,10 +5274,11 @@ public:
       if (errno == 0 && user_specified_max != 0) {
         process->SetUserSpecifiedMaxMemoryTransferSize(user_specified_max);
         result.SetStatus(eReturnStatusSuccessFinishResult);
-        return;
+        return true;
       }
     }
     result.SetStatus(eReturnStatusFailed);
+    return false;
   }
 };
 
@@ -5294,13 +5299,13 @@ public:
 
   ~CommandObjectProcessGDBRemotePacketSend() override = default;
 
-  void DoExecute(Args &command, CommandReturnObject &result) override {
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
     const size_t argc = command.GetArgumentCount();
     if (argc == 0) {
       result.AppendErrorWithFormat(
           "'%s' takes a one or more packet content arguments",
           m_cmd_name.c_str());
-      return;
+      return false;
     }
 
     ProcessGDBRemote *process =
@@ -5326,6 +5331,7 @@ public:
           output_strm.Printf("response: %s\n", response.GetStringRef().data());
       }
     }
+    return true;
   }
 };
 
@@ -5342,12 +5348,12 @@ public:
 
   ~CommandObjectProcessGDBRemotePacketMonitor() override = default;
 
-  void DoExecute(llvm::StringRef command,
+  bool DoExecute(llvm::StringRef command,
                  CommandReturnObject &result) override {
     if (command.empty()) {
       result.AppendErrorWithFormat("'%s' takes a command string argument",
                                    m_cmd_name.c_str());
-      return;
+      return false;
     }
 
     ProcessGDBRemote *process =
@@ -5371,6 +5377,7 @@ public:
       else
         output_strm.Printf("response: %s\n", response.GetStringRef().data());
     }
+    return true;
   }
 };
 

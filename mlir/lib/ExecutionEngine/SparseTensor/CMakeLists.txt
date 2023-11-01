@@ -8,6 +8,7 @@
 add_mlir_library(MLIRSparseTensorRuntime
   File.cpp
   MapRef.cpp
+  NNZ.cpp
   Storage.cpp
 
   EXCLUDE_FROM_LIBMLIR

@@ -601,7 +601,7 @@ static FailureOr<StructuredLoopProperties> createSingleExitingLatch(
   {
     auto builder = OpBuilder::atBlockBegin(latchBlock);
     interface.createConditionalBranch(
-        loc, builder, shouldRepeat, loopHeader,
+        builder.getUnknownLoc(), builder, shouldRepeat, loopHeader,
         latchBlock->getArguments().take_front(loopHeader->getNumArguments()),
         /*falseDest=*/exitBlock,
         /*falseArgs=*/{});

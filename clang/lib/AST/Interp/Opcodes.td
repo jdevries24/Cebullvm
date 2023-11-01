@@ -72,11 +72,6 @@ def IntegerTypeClass : TypeClass {
                Uint32, Sint64, Uint64, IntAP, IntAPS];
 }
 
-def FixedSizeIntegralTypeClass : TypeClass {
-  let Types = [Sint8, Uint8, Sint16, Uint16, Sint32,
-               Uint32, Sint64, Uint64, Bool];
-}
-
 def NumberTypeClass : TypeClass {
   let Types = !listconcat(IntegerTypeClass.Types, [Float]);
 }
@@ -248,16 +243,8 @@ def ConstBool : ConstOpcode<Bool, ArgBool>;
 
 // [] -> [Integer]
 def Zero : Opcode {
-  let Types = [FixedSizeIntegralTypeClass];
+  let Types = [AluTypeClass];
   let HasGroup = 1;
-}
-
-def ZeroIntAP : Opcode {
-  let Args = [ArgUint32];
-}
-
-def ZeroIntAPS : Opcode {
-  let Args = [ArgUint32];
 }
 
 // [] -> [Pointer]
@@ -687,5 +674,3 @@ def InvalidCast : Opcode {
 def InvalidDeclRef : Opcode {
   let Args = [ArgDeclRef];
 }
-
-def ArrayDecay : Opcode;

@@ -265,7 +265,7 @@ createLinkGraphFromELFObject_aarch32(MemoryBufferRef ObjectBuffer) {
   case Triple::arm:
   case Triple::thumb: {
     auto &ELFFile = cast<ELFObjectFile<ELF32LE>>(**ELFObj).getELFFile();
-    return ELFLinkGraphBuilder_aarch32<llvm::endianness::little>(
+    return ELFLinkGraphBuilder_aarch32<support::little>(
                (*ELFObj)->getFileName(), ELFFile, TT, std::move(*Features),
                ArmCfg)
         .buildGraph();
@@ -273,7 +273,7 @@ createLinkGraphFromELFObject_aarch32(MemoryBufferRef ObjectBuffer) {
   case Triple::armeb:
   case Triple::thumbeb: {
     auto &ELFFile = cast<ELFObjectFile<ELF32BE>>(**ELFObj).getELFFile();
-    return ELFLinkGraphBuilder_aarch32<llvm::endianness::big>(
+    return ELFLinkGraphBuilder_aarch32<support::big>(
                (*ELFObj)->getFileName(), ELFFile, TT, std::move(*Features),
                ArmCfg)
         .buildGraph();

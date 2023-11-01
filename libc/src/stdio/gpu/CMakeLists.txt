@@ -252,17 +252,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  ungetc
-  SRCS
-    ungetc.cpp
-  HDRS
-    ../ungetc.h
-  DEPENDS
-    libc.include.stdio
-    .gpu_file
-)
-
-add_entrypoint_object(
   stdin
   SRCS
     stdin.cpp

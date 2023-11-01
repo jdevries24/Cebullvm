@@ -502,7 +502,7 @@ static ConstantInt *GetConstantInt(Value *V, const DataLayout &DL) {
           return CI;
         else
           return cast<ConstantInt>(
-              ConstantFoldIntegerCast(CI, PtrTy, /*isSigned=*/false, DL));
+              ConstantExpr::getIntegerCast(CI, PtrTy, /*isSigned=*/false));
       }
   return nullptr;
 }
@@ -822,7 +822,7 @@ BasicBlock *SimplifyCFGOpt::GetValueEqualityComparisonCases(
 static void
 EliminateBlockCases(BasicBlock *BB,
                     std::vector<ValueEqualityComparisonCase> &Cases) {
-  llvm::erase(Cases, BB);
+  llvm::erase_value(Cases, BB);
 }
 
 /// Return true if there are any keys in C1 that exist in C2 as well.

@@ -17,6 +17,21 @@ def run(f):
 
 
 @run
+def getParentLoop():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate, [], pdl.OperationType.get()
+    )
+    with InsertionPoint(sequence.body):
+        loop.GetParentForOp(
+            transform.OperationType.get("scf.for"), sequence.bodyTarget, num_loops=2
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: getParentLoop
+    # CHECK: = transform.loop.get_parent_for %
+    # CHECK: num_loops = 2
+
+
+@run
 def loopOutline():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,

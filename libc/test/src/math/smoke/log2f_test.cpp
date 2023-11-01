@@ -15,9 +15,9 @@
 
 #include <stdint.h>
 
-using LlvmLibcLog2fTest = LIBC_NAMESPACE::testing::FPTest<float>;
+DECLARE_SPECIAL_CONSTANTS(float)
 
-TEST_F(LlvmLibcLog2fTest, SpecialNumbers) {
+TEST(LlvmLibcLog2fTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::log2f(aNaN));
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::log2f(inf));
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log2f(neg_inf), FE_INVALID);

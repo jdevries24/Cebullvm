@@ -325,7 +325,7 @@ class VPDef {
     assert(V->Def == this && "can only remove VPValue linked with this VPDef");
     assert(is_contained(DefinedValues, V) &&
            "VPValue to remove must be in DefinedValues");
-    llvm::erase(DefinedValues, V);
+    erase_value(DefinedValues, V);
     V->Def = nullptr;
   }
 

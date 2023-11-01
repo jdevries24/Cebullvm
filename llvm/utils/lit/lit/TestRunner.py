@@ -12,8 +12,6 @@ import shlex
 import shutil
 import tempfile
 import threading
-import typing
-from typing import Optional, Tuple
 
 import io
 
@@ -34,17 +32,6 @@ class InternalShellError(Exception):
     def __init__(self, command, message):
         self.command = command
         self.message = message
-
-
-class ScriptFatal(Exception):
-    """
-    A script had a fatal error such that there's no point in retrying.  The
-    message has not been emitted on stdout or stderr but is instead included in
-    this exception.
-    """
-
-    def __init__(self, message):
-        super().__init__(message)
 
 
 kIsWindows = platform.system() == "Windows"
@@ -1022,8 +1009,7 @@ def formatOutput(title, data, limit=None):
     return out
 
 
-# Always either returns the tuple (out, err, exitCode, timeoutInfo) or raises a
-# ScriptFatal exception.
+# Normally returns out, err, exitCode, timeoutInfo.
 #
 # If debug is True (the normal lit behavior), err is empty, and out contains an
 # execution trace, including stdout and stderr shown per command executed.
@@ -1031,9 +1017,7 @@ def formatOutput(title, data, limit=None):
 # If debug is False (set by some custom lit test formats that call this
 # function), out contains only stdout from the script, err contains only stderr
 # from the script, and there is no execution trace.
-def executeScriptInternal(
-    test, litConfig, tmpBase, commands, cwd, debug=True
-) -> Tuple[str, str, int, Optional[str]]:
+def executeScriptInternal(test, litConfig, tmpBase, commands, cwd, debug=True):
     cmds = []
     for i, ln in enumerate(commands):
         # Within lit, we try to always add '%dbg(...)' to command lines in order
@@ -1059,9 +1043,9 @@ def executeScriptInternal(
                 ShUtil.ShParser(ln, litConfig.isWindows, test.config.pipefail).parse()
             )
         except:
-            raise ScriptFatal(
-                f"shell parser error on {dbg}: {command.lstrip()}\n"
-            ) from None
+            return lit.Test.Result(
+                Test.FAIL, f"shell parser error on {dbg}: {command.lstrip()}\n"
+            )
 
     cmd = cmds[0]
     for c in cmds[1:]:
@@ -2146,11 +2130,8 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
     return script
 
 
-def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Result:
-    # Always returns the tuple (out, err, exitCode, timeoutInfo, status).
-    def runOnce(
-        execdir,
-    ) -> Tuple[str, str, int, Optional[str], Test.ResultCode]:
+def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
+    def runOnce(execdir):
         # script is modified below (for litConfig.per_test_coverage, and for
         # %dbg expansions).  runOnce can be called multiple times, but applying
         # the modifications multiple times can corrupt script, so always modify
@@ -2177,16 +2158,12 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
                     command = buildPdbgCommand(dbg, command)
                 scriptCopy[i] = command
 
-        try:
-            if useExternalSh:
-                res = executeScript(test, litConfig, tmpBase, scriptCopy, execdir)
-            else:
-                res = executeScriptInternal(
-                    test, litConfig, tmpBase, scriptCopy, execdir
-                )
-        except ScriptFatal as e:
-            out = f"# " + "\n# ".join(str(e).splitlines()) + "\n"
-            return out, "", 1, None, Test.UNRESOLVED
+        if useExternalSh:
+            res = executeScript(test, litConfig, tmpBase, scriptCopy, execdir)
+        else:
+            res = executeScriptInternal(test, litConfig, tmpBase, scriptCopy, execdir)
+        if isinstance(res, lit.Test.Result):
+            return res
 
         out, err, exitCode, timeoutInfo = res
         if exitCode == 0:
@@ -2206,6 +2183,9 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
     attempts = test.allowed_retries + 1
     for i in range(attempts):
         res = runOnce(execdir)
+        if isinstance(res, lit.Test.Result):
+            return res
+
         out, err, exitCode, timeoutInfo, status = res
         if status != Test.FAIL:
             break

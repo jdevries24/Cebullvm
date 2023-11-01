@@ -55,11 +55,11 @@ TEST_F(FormatTestMacroExpansion, UnexpandConfiguredMacros) {
   verifyFormat("ID(CALL(CALL(return a * b;)));", Style);
 
   verifyFormat("ASSIGN_OR_RETURN(MySomewhatLongType *variable,\n"
-               "                 MySomewhatLongFunction(SomethingElse()));",
+               "                 MySomewhatLongFunction(SomethingElse()));\n",
                Style);
   verifyFormat("ASSIGN_OR_RETURN(MySomewhatLongType *variable,\n"
                "                 MySomewhatLongFunction(SomethingElse()), "
-               "ReturnMe());",
+               "ReturnMe());\n",
                Style);
 
   verifyFormat(R"(

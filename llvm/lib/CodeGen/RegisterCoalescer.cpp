@@ -1415,9 +1415,6 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   // from SUBREG_TO_REG, such as:
   // $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
   // undef %0.sub_32bit = MOV32r0 implicit-def dead $eflags, implicit-def %0
-  //
-  // The implicit-def of the super register may have been reduced to
-  // subregisters depending on the uses.
 
   bool NewMIDefinesFullReg = false;
 
@@ -1435,14 +1432,12 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
         assert(MO.isImplicit() && MO.getReg().isPhysical() &&
                (MO.isDead() ||
                 (DefSubIdx &&
-                 ((TRI->getSubReg(MO.getReg(), DefSubIdx) ==
-                   MCRegister((unsigned)NewMI.getOperand(0).getReg())) ||
-                  TRI->isSubRegisterEq(NewMI.getOperand(0).getReg(),
-                                       MO.getReg())))));
+                 (TRI->getSubReg(MO.getReg(), DefSubIdx) ==
+                  MCRegister((unsigned)NewMI.getOperand(0).getReg())))));
         NewMIImplDefs.push_back(MO.getReg().asMCReg());
       } else {
-        assert(MO.getReg() == NewMI.getOperand(0).getReg());
-
+        assert(MO.getReg() == NewMI.getOperand(0).getReg() &&
+               MO.getSubReg() == 0);
         // We're only expecting another def of the main output, so the range
         // should get updated with the regular output range.
         //

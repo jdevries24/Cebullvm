@@ -14,21 +14,21 @@
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include <math.h>
 
-using LlvmLibcAtanfTest = LIBC_NAMESPACE::testing::FPTest<float>;
-
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+
+DECLARE_SPECIAL_CONSTANTS(float)
 
 constexpr int def_count = 100003;
 constexpr float def_prec = 0.500001f;
 
 auto f_normal = [](float x) -> bool { return !(isnan(x) || isinf(x)); };
 
-TEST_F(LlvmLibcAtanfTest, InPositiveRange) {
+TEST(LlvmLibcAtanfPosTest, InFloatRange) {
   CHECK_DATA(0.0f, inf, mpfr::Operation::Atan, LIBC_NAMESPACE::atan_eval,
              f_normal, def_count, def_prec);
 }
 
-TEST_F(LlvmLibcAtanfTest, InNegativeRange) {
+TEST(LlvmLibcAtanfNegTest, InFloatRange) {
   CHECK_DATA(-0.0f, neg_inf, mpfr::Operation::Atan, LIBC_NAMESPACE::atan_eval,
              f_normal, def_count, def_prec);
 }

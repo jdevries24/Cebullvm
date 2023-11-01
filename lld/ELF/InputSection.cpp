@@ -435,7 +435,10 @@ void InputSection::copyRelocations(uint8_t *buf,
         continue;
       }
       SectionBase *section = d->section;
-      assert(section->isLive());
+      if (!section->isLive()) {
+        p->setSymbolAndType(0, 0, false);
+        continue;
+      }
 
       int64_t addend = rel.addend;
       const uint8_t *bufLoc = sec->content().begin() + rel.offset;

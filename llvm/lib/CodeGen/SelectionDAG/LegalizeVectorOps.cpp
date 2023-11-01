@@ -402,8 +402,6 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FCEIL:
   case ISD::FTRUNC:
   case ISD::FRINT:
-  case ISD::LRINT:
-  case ISD::LLRINT:
   case ISD::FNEARBYINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:

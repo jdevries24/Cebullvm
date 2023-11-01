@@ -1693,16 +1693,11 @@ LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter, Operation *op,
           .Case<linalg::LinalgOp>([&](auto linalgOp) {
             // TODO: isaConvolutionOpInterface that can also infer from generic
             // features. Will require stride/dilation attributes inference.
-            if (isa<ConvolutionOpInterface>(linalgOp.getOperation())) {
-              FailureOr<Operation *> convOr =
-                  vectorizeConvolution(rewriter, linalgOp);
-              if (succeeded(convOr)) {
-                llvm::append_range(results, (*convOr)->getResults());
-                return success();
-              }
-
-              LDBG("Unsupported convolution can't be vectorized.\n");
-              return failure();
+            FailureOr<Operation *> convOr =
+                vectorizeConvolution(rewriter, linalgOp);
+            if (succeeded(convOr)) {
+              llvm::append_range(results, (*convOr)->getResults());
+              return success();
             }
 
             LDBG("Vectorize generic by broadcasting to the canonical vector "

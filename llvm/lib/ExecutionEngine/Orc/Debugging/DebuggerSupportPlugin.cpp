@@ -374,7 +374,7 @@ void GDBJITDebugInfoRegistrationPlugin::modifyPassConfigForMachO(
   case Triple::aarch64:
     // Supported, continue.
     assert(LG.getPointerSize() == 8 && "Graph has incorrect pointer size");
-    assert(LG.getEndianness() == llvm::endianness::little &&
+    assert(LG.getEndianness() == support::little &&
            "Graph has incorrect endianness");
     break;
   default:
@@ -384,7 +384,7 @@ void GDBJITDebugInfoRegistrationPlugin::modifyPassConfigForMachO(
              << "MachO graph " << LG.getName()
              << "(triple = " << LG.getTargetTriple().str()
              << ", pointer size = " << LG.getPointerSize() << ", endianness = "
-             << (LG.getEndianness() == llvm::endianness::big ? "big" : "little")
+             << (LG.getEndianness() == support::big ? "big" : "little")
              << ")\n";
     });
     return;

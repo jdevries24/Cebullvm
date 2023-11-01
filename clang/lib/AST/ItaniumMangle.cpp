@@ -2889,10 +2889,6 @@ static bool isTypeSubstitutable(Qualifiers Quals, const Type *Ty,
     return true;
   if (Ty->isOpenCLSpecificType())
     return true;
-  // From Clang 18.0 we correctly treat SVE types as substitution candidates.
-  if (Ty->isSVESizelessBuiltinType() &&
-      Ctx.getLangOpts().getClangABICompat() > LangOptions::ClangABI::Ver17)
-    return true;
   if (Ty->isBuiltinType())
     return false;
   // Through to Clang 6.0, we accidentally treated undeduced auto types as
@@ -3050,12 +3046,21 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   // UNSUPPORTED:    ::= De # IEEE 754r decimal floating point (128 bits)
   // UNSUPPORTED:    ::= Df # IEEE 754r decimal floating point (32 bits)
   //                 ::= Dh # IEEE 754r half-precision floating point (16 bits)
-  //                 ::= DF <number> _ # ISO/IEC TS 18661 binary floating point
-  //                 type _FloatN (N bits);
+  //                 ::= DF <number> _ # ISO/IEC TS 18661 binary floating point type _FloatN (N bits);
   //                 ::= Di # char32_t
   //                 ::= Ds # char16_t
   //                 ::= Dn # std::nullptr_t (i.e., decltype(nullptr))
+  //                 ::= [DS] DA  # N1169 fixed-point [_Sat] T _Accum
+  //                 ::= [DS] DR  # N1169 fixed-point [_Sat] T _Fract
   //                 ::= u <source-name>    # vendor extended type
+  //
+  //  <fixed-point-size>
+  //                 ::= s # short
+  //                 ::= t # unsigned short
+  //                 ::= i # plain
+  //                 ::= j # unsigned
+  //                 ::= l # long
+  //                 ::= m # unsigned long
   std::string type_name;
   // Normalize integer types as vendor extended types:
   // u<length>i<type size>
@@ -3200,30 +3205,77 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << "DF16_";
     break;
   case BuiltinType::ShortAccum:
+    Out << "DAs";
+    break;
   case BuiltinType::Accum:
+    Out << "DAi";
+    break;
   case BuiltinType::LongAccum:
+    Out << "DAl";
+    break;
   case BuiltinType::UShortAccum:
+    Out << "DAt";
+    break;
   case BuiltinType::UAccum:
+    Out << "DAj";
+    break;
   case BuiltinType::ULongAccum:
+    Out << "DAm";
+    break;
   case BuiltinType::ShortFract:
+    Out << "DRs";
+    break;
   case BuiltinType::Fract:
+    Out << "DRi";
+    break;
   case BuiltinType::LongFract:
+    Out << "DRl";
+    break;
   case BuiltinType::UShortFract:
+    Out << "DRt";
+    break;
   case BuiltinType::UFract:
+    Out << "DRj";
+    break;
   case BuiltinType::ULongFract:
+    Out << "DRm";
+    break;
   case BuiltinType::SatShortAccum:
+    Out << "DSDAs";
+    break;
   case BuiltinType::SatAccum:
+    Out << "DSDAi";
+    break;
   case BuiltinType::SatLongAccum:
+    Out << "DSDAl";
+    break;
   case BuiltinType::SatUShortAccum:
+    Out << "DSDAt";
+    break;
   case BuiltinType::SatUAccum:
+    Out << "DSDAj";
+    break;
   case BuiltinType::SatULongAccum:
+    Out << "DSDAm";
+    break;
   case BuiltinType::SatShortFract:
+    Out << "DSDRs";
+    break;
   case BuiltinType::SatFract:
+    Out << "DSDRi";
+    break;
   case BuiltinType::SatLongFract:
+    Out << "DSDRl";
+    break;
   case BuiltinType::SatUShortFract:
+    Out << "DSDRt";
+    break;
   case BuiltinType::SatUFract:
+    Out << "DSDRj";
+    break;
   case BuiltinType::SatULongFract:
-    llvm_unreachable("Fixed point types are disabled for c++");
+    Out << "DSDRm";
+    break;
   case BuiltinType::Half:
     Out << "Dh";
     break;
@@ -3320,16 +3372,9 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
 #define SVE_VECTOR_TYPE(InternalName, MangledName, Id, SingletonId, NumEls,    \
                         ElBits, IsSigned, IsFP, IsBF)                          \
   case BuiltinType::Id:                                                        \
-    if (T->getKind() == BuiltinType::SveBFloat16 &&                            \
-        isCompatibleWith(LangOptions::ClangABI::Ver17)) {                      \
-      /* Prior to Clang 18.0 we used this incorrect mangled name */            \
-      type_name = "__SVBFloat16_t";                                            \
-      Out << "u" << type_name.size() << type_name;                             \
-    } else {                                                                   \
-      type_name = MangledName;                                                 \
-      Out << (type_name == InternalName ? "u" : "") << type_name.size()        \
-          << type_name;                                                        \
-    }                                                                          \
+    type_name = MangledName;                                                   \
+    Out << (type_name == InternalName ? "u" : "") << type_name.size()          \
+        << type_name;                                                          \
     break;
 #define SVE_PREDICATE_TYPE(InternalName, MangledName, Id, SingletonId, NumEls) \
   case BuiltinType::Id:                                                        \
@@ -3384,7 +3429,6 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_OpenCLKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
-  case CC_M68kRTD:
     // FIXME: we should be mangling all of the above.
     return "";
 
@@ -3707,7 +3751,7 @@ void CXXNameMangler::mangleNeonVectorType(const VectorType *T) {
   QualType EltType = T->getElementType();
   assert(EltType->isBuiltinType() && "Neon vector element not a BuiltinType");
   const char *EltName = nullptr;
-  if (T->getVectorKind() == VectorKind::NeonPoly) {
+  if (T->getVectorKind() == VectorType::NeonPolyVector) {
     switch (cast<BuiltinType>(EltType)->getKind()) {
     case BuiltinType::SChar:
     case BuiltinType::UChar:
@@ -3809,7 +3853,7 @@ void CXXNameMangler::mangleAArch64NeonVectorType(const VectorType *T) {
          "Neon vector type not 64 or 128 bits");
 
   StringRef EltName;
-  if (T->getVectorKind() == VectorKind::NeonPoly) {
+  if (T->getVectorKind() == VectorType::NeonPolyVector) {
     switch (cast<BuiltinType>(EltType)->getKind()) {
     case BuiltinType::UChar:
       EltName = "Poly8";
@@ -3864,8 +3908,8 @@ void CXXNameMangler::mangleAArch64NeonVectorType(const DependentVectorType *T) {
 // for the Arm Architecture, see
 // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#appendix-c-mangling
 void CXXNameMangler::mangleAArch64FixedSveVectorType(const VectorType *T) {
-  assert((T->getVectorKind() == VectorKind::SveFixedLengthData ||
-          T->getVectorKind() == VectorKind::SveFixedLengthPredicate) &&
+  assert((T->getVectorKind() == VectorType::SveFixedLengthDataVector ||
+          T->getVectorKind() == VectorType::SveFixedLengthPredicateVector) &&
          "expected fixed-length SVE vector!");
 
   QualType EltType = T->getElementType();
@@ -3878,7 +3922,7 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(const VectorType *T) {
     TypeName = "__SVInt8_t";
     break;
   case BuiltinType::UChar: {
-    if (T->getVectorKind() == VectorKind::SveFixedLengthData)
+    if (T->getVectorKind() == VectorType::SveFixedLengthDataVector)
       TypeName = "__SVUint8_t";
     else
       TypeName = "__SVBool_t";
@@ -3920,7 +3964,7 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(const VectorType *T) {
 
   unsigned VecSizeInBits = getASTContext().getTypeInfo(T).Width;
 
-  if (T->getVectorKind() == VectorKind::SveFixedLengthPredicate)
+  if (T->getVectorKind() == VectorType::SveFixedLengthPredicateVector)
     VecSizeInBits *= 8;
 
   Out << "9__SVE_VLSI" << 'u' << TypeName.size() << TypeName << "Lj"
@@ -3937,7 +3981,7 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(
 }
 
 void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
-  assert(T->getVectorKind() == VectorKind::RVVFixedLengthData &&
+  assert(T->getVectorKind() == VectorType::RVVFixedLengthDataVector &&
          "expected fixed-length RVV vector!");
 
   QualType EltType = T->getElementType();
@@ -4021,8 +4065,8 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(
 //                         ::= p # AltiVec vector pixel
 //                         ::= b # Altivec vector bool
 void CXXNameMangler::mangleType(const VectorType *T) {
-  if ((T->getVectorKind() == VectorKind::Neon ||
-       T->getVectorKind() == VectorKind::NeonPoly)) {
+  if ((T->getVectorKind() == VectorType::NeonVector ||
+       T->getVectorKind() == VectorType::NeonPolyVector)) {
     llvm::Triple Target = getASTContext().getTargetInfo().getTriple();
     llvm::Triple::ArchType Arch =
         getASTContext().getTargetInfo().getTriple().getArch();
@@ -4032,26 +4076,26 @@ void CXXNameMangler::mangleType(const VectorType *T) {
     else
       mangleNeonVectorType(T);
     return;
-  } else if (T->getVectorKind() == VectorKind::SveFixedLengthData ||
-             T->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
+  } else if (T->getVectorKind() == VectorType::SveFixedLengthDataVector ||
+             T->getVectorKind() == VectorType::SveFixedLengthPredicateVector) {
     mangleAArch64FixedSveVectorType(T);
     return;
-  } else if (T->getVectorKind() == VectorKind::RVVFixedLengthData) {
+  } else if (T->getVectorKind() == VectorType::RVVFixedLengthDataVector) {
     mangleRISCVFixedRVVVectorType(T);
     return;
   }
   Out << "Dv" << T->getNumElements() << '_';
-  if (T->getVectorKind() == VectorKind::AltiVecPixel)
+  if (T->getVectorKind() == VectorType::AltiVecPixel)
     Out << 'p';
-  else if (T->getVectorKind() == VectorKind::AltiVecBool)
+  else if (T->getVectorKind() == VectorType::AltiVecBool)
     Out << 'b';
   else
     mangleType(T->getElementType());
 }
 
 void CXXNameMangler::mangleType(const DependentVectorType *T) {
-  if ((T->getVectorKind() == VectorKind::Neon ||
-       T->getVectorKind() == VectorKind::NeonPoly)) {
+  if ((T->getVectorKind() == VectorType::NeonVector ||
+       T->getVectorKind() == VectorType::NeonPolyVector)) {
     llvm::Triple Target = getASTContext().getTargetInfo().getTriple();
     llvm::Triple::ArchType Arch =
         getASTContext().getTargetInfo().getTriple().getArch();
@@ -4061,11 +4105,11 @@ void CXXNameMangler::mangleType(const DependentVectorType *T) {
     else
       mangleNeonVectorType(T);
     return;
-  } else if (T->getVectorKind() == VectorKind::SveFixedLengthData ||
-             T->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
+  } else if (T->getVectorKind() == VectorType::SveFixedLengthDataVector ||
+             T->getVectorKind() == VectorType::SveFixedLengthPredicateVector) {
     mangleAArch64FixedSveVectorType(T);
     return;
-  } else if (T->getVectorKind() == VectorKind::RVVFixedLengthData) {
+  } else if (T->getVectorKind() == VectorType::RVVFixedLengthDataVector) {
     mangleRISCVFixedRVVVectorType(T);
     return;
   }
@@ -4073,9 +4117,9 @@ void CXXNameMangler::mangleType(const DependentVectorType *T) {
   Out << "Dv";
   mangleExpression(T->getSizeExpr());
   Out << '_';
-  if (T->getVectorKind() == VectorKind::AltiVecPixel)
+  if (T->getVectorKind() == VectorType::AltiVecPixel)
     Out << 'p';
-  else if (T->getVectorKind() == VectorKind::AltiVecBool)
+  else if (T->getVectorKind() == VectorType::AltiVecBool)
     Out << 'b';
   else
     mangleType(T->getElementType());
@@ -4209,20 +4253,20 @@ void CXXNameMangler::mangleType(const DependentNameType *T) {
   //                   ::= Te <name> # dependent elaborated type specifier using
   //                                 # 'enum'
   switch (T->getKeyword()) {
-  case ElaboratedTypeKeyword::None:
-  case ElaboratedTypeKeyword::Typename:
-    break;
-  case ElaboratedTypeKeyword::Struct:
-  case ElaboratedTypeKeyword::Class:
-  case ElaboratedTypeKeyword::Interface:
-    Out << "Ts";
-    break;
-  case ElaboratedTypeKeyword::Union:
-    Out << "Tu";
-    break;
-  case ElaboratedTypeKeyword::Enum:
-    Out << "Te";
-    break;
+    case ETK_None:
+    case ETK_Typename:
+      break;
+    case ETK_Struct:
+    case ETK_Class:
+    case ETK_Interface:
+      Out << "Ts";
+      break;
+    case ETK_Union:
+      Out << "Tu";
+      break;
+    case ETK_Enum:
+      Out << "Te";
+      break;
   }
   // Typename types are always nested
   Out << 'N';
@@ -5079,14 +5123,6 @@ recurse:
       unsigned DiagID = Diags.getCustomDiagID(
           DiagnosticsEngine::Error,
           "cannot yet mangle __builtin_omp_required_simd_align expression");
-      Diags.Report(DiagID);
-      return;
-    }
-    case UETT_VectorElements: {
-      DiagnosticsEngine &Diags = Context.getDiags();
-      unsigned DiagID = Diags.getCustomDiagID(
-          DiagnosticsEngine::Error,
-          "cannot yet mangle __builtin_vectorelements expression");
       Diags.Report(DiagID);
       return;
     }

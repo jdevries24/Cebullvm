@@ -368,7 +368,6 @@ if(FUCHSIA_ENABLE_LLDB)
     liblldb
     lldb-server
     lldb-argdumper
-    lldb-dap
   )
   if(LLDB_ENABLE_PYTHON)
     list(APPEND _FUCHSIA_LLDB_COMPONENTS lldb-python-scripts)

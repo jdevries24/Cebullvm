@@ -378,15 +378,6 @@ static DecodeStatus decodeOperand_AVLdSt_Any(MCInst &Inst, unsigned Imm,
   return addOperand(Inst, DAsm->decodeSrcOp(Opw, Imm | 256));
 }
 
-static DecodeStatus decodeOperand_VSrc_f64(MCInst &Inst, unsigned Imm,
-                                           uint64_t Addr,
-                                           const MCDisassembler *Decoder) {
-  assert(Imm < (1 << 9) && "9-bit encoding");
-  auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
-  return addOperand(
-      Inst, DAsm->decodeSrcOp(AMDGPUDisassembler::OPW64, Imm, false, 64, true));
-}
-
 static DecodeStatus
 DecodeAVLdSt_32RegisterClass(MCInst &Inst, unsigned Imm, uint64_t Addr,
                              const MCDisassembler *Decoder) {
@@ -1228,7 +1219,7 @@ AMDGPUDisassembler::decodeMandatoryLiteralConstant(unsigned Val) const {
   return MCOperand::createImm(Literal);
 }
 
-MCOperand AMDGPUDisassembler::decodeLiteralConstant(bool ExtendFP64) const {
+MCOperand AMDGPUDisassembler::decodeLiteralConstant() const {
   // For now all literal constants are supposed to be unsigned integer
   // ToDo: deal with signed/unsigned 64-bit integer constants
   // ToDo: deal with float/double constants
@@ -1238,11 +1229,9 @@ MCOperand AMDGPUDisassembler::decodeLiteralConstant(bool ExtendFP64) const {
                         Twine(Bytes.size()));
     }
     HasLiteral = true;
-    Literal = Literal64 = eatBytes<uint32_t>(Bytes);
-    if (ExtendFP64)
-      Literal64 <<= 32;
+    Literal = eatBytes<uint32_t>(Bytes);
   }
-  return MCOperand::createImm(ExtendFP64 ? Literal64 : Literal);
+  return MCOperand::createImm(Literal);
 }
 
 MCOperand AMDGPUDisassembler::decodeIntImmed(unsigned Imm) {
@@ -1459,7 +1448,7 @@ int AMDGPUDisassembler::getTTmpIdx(unsigned Val) const {
 
 MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val,
                                           bool MandatoryLiteral,
-                                          unsigned ImmWidth, bool IsFP) const {
+                                          unsigned ImmWidth) const {
   using namespace AMDGPU::EncValues;
 
   assert(Val < 1024); // enum10
@@ -1471,15 +1460,13 @@ MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val,
     return createRegOperand(IsAGPR ? getAgprClassId(Width)
                                    : getVgprClassId(Width), Val - VGPR_MIN);
   }
-  return decodeNonVGPRSrcOp(Width, Val & 0xFF, MandatoryLiteral, ImmWidth,
-                            IsFP);
+  return decodeNonVGPRSrcOp(Width, Val & 0xFF, MandatoryLiteral, ImmWidth);
 }
 
 MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(const OpWidthTy Width,
                                                  unsigned Val,
                                                  bool MandatoryLiteral,
-                                                 unsigned ImmWidth,
-                                                 bool IsFP) const {
+                                                 unsigned ImmWidth) const {
   // Cases when Val{8} is 1 (vgpr, agpr or true 16 vgpr) should have been
   // decoded earlier.
   assert(Val < (1 << 8) && "9-bit Src encoding when Val{8} is 0");
@@ -1507,7 +1494,7 @@ MCOperand AMDGPUDisassembler::decodeNonVGPRSrcOp(const OpWidthTy Width,
       // Keep a sentinel value for deferred setting
       return MCOperand::createImm(LITERAL_CONST);
     else
-      return decodeLiteralConstant(IsFP && ImmWidth == 64);
+      return decodeLiteralConstant();
   }
 
   switch (Width) {
@@ -1818,23 +1805,16 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   if (FourByteBuffer & COMPUTE_PGM_RSRC1_CDBG_USER)
     return MCDisassembler::Fail;
 
-  if (isGFX9Plus())
-    PRINT_DIRECTIVE(".amdhsa_fp16_overflow", COMPUTE_PGM_RSRC1_GFX9_PLUS_FP16_OVFL);
+  PRINT_DIRECTIVE(".amdhsa_fp16_overflow", COMPUTE_PGM_RSRC1_FP16_OVFL);
 
-  if (!isGFX9Plus())
-    if (FourByteBuffer & COMPUTE_PGM_RSRC1_GFX6_GFX8_RESERVED0)
-      return MCDisassembler::Fail;
-  if (FourByteBuffer & COMPUTE_PGM_RSRC1_RESERVED1)
+  if (FourByteBuffer & COMPUTE_PGM_RSRC1_RESERVED0)
     return MCDisassembler::Fail;
-  if (!isGFX10Plus())
-    if (FourByteBuffer & COMPUTE_PGM_RSRC1_GFX6_GFX9_RESERVED2)
-      return MCDisassembler::Fail;
 
   if (isGFX10Plus()) {
     PRINT_DIRECTIVE(".amdhsa_workgroup_processor_mode",
-                    COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE);
-    PRINT_DIRECTIVE(".amdhsa_memory_ordered", COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED);
-    PRINT_DIRECTIVE(".amdhsa_forward_progress", COMPUTE_PGM_RSRC1_GFX10_PLUS_FWD_PROGRESS);
+                    COMPUTE_PGM_RSRC1_WGP_MODE);
+    PRINT_DIRECTIVE(".amdhsa_memory_ordered", COMPUTE_PGM_RSRC1_MEM_ORDERED);
+    PRINT_DIRECTIVE(".amdhsa_forward_progress", COMPUTE_PGM_RSRC1_FWD_PROGRESS);
   }
   return MCDisassembler::Success;
 }
@@ -1915,29 +1895,16 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
       PRINT_PSEUDO_DIRECTIVE_COMMENT(
           "SHARED_VGPR_COUNT", COMPUTE_PGM_RSRC3_GFX10_PLUS_SHARED_VGPR_COUNT);
     }
-
-    if (isGFX11Plus()) {
-      PRINT_PSEUDO_DIRECTIVE_COMMENT("INST_PREF_SIZE",
-                                     COMPUTE_PGM_RSRC3_GFX11_PLUS_INST_PREF_SIZE);
-      PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_START",
-                                     COMPUTE_PGM_RSRC3_GFX11_PLUS_TRAP_ON_START);
-      PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_END",
-                                     COMPUTE_PGM_RSRC3_GFX11_PLUS_TRAP_ON_END);
-    } else {
-      if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_RESERVED0)
-        return MCDisassembler::Fail;
-    }
-
-    if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_PLUS_RESERVED1)
+    PRINT_PSEUDO_DIRECTIVE_COMMENT("INST_PREF_SIZE",
+                                   COMPUTE_PGM_RSRC3_GFX10_PLUS_INST_PREF_SIZE);
+    PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_START",
+                                   COMPUTE_PGM_RSRC3_GFX10_PLUS_TRAP_ON_START);
+    PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_END",
+                                   COMPUTE_PGM_RSRC3_GFX10_PLUS_TRAP_ON_END);
+    if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_PLUS_RESERVED0)
       return MCDisassembler::Fail;
-
-    if (isGFX11Plus()) {
-      PRINT_PSEUDO_DIRECTIVE_COMMENT("IMAGE_OP",
-                                     COMPUTE_PGM_RSRC3_GFX11_PLUS_TRAP_ON_START);
-    } else {
-      if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_RESERVED2)
-        return MCDisassembler::Fail;
-    }
+    PRINT_PSEUDO_DIRECTIVE_COMMENT("IMAGE_OP",
+                                   COMPUTE_PGM_RSRC3_GFX10_PLUS_TRAP_ON_START);
   } else if (FourByteBuffer) {
     return MCDisassembler::Fail;
   }

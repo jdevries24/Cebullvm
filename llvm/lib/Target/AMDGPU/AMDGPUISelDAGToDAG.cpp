@@ -595,15 +595,11 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
       break;
 
     uint64_t Imm;
-    if (ConstantFPSDNode *FP = dyn_cast<ConstantFPSDNode>(N)) {
+    if (ConstantFPSDNode *FP = dyn_cast<ConstantFPSDNode>(N))
       Imm = FP->getValueAPF().bitcastToAPInt().getZExtValue();
-      if (AMDGPU::isValid32BitLiteral(Imm, true))
-        break;
-    } else {
+    else {
       ConstantSDNode *C = cast<ConstantSDNode>(N);
       Imm = C->getZExtValue();
-      if (AMDGPU::isValid32BitLiteral(Imm, false))
-        break;
     }
 
     SDLoc DL(N);
@@ -3018,7 +3014,7 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
     if (!RC || SIRI->isSGPRClass(RC))
       return false;
 
-    if (RC != &AMDGPU::VS_32RegClass && RC != &AMDGPU::VS_64RegClass) {
+    if (RC != &AMDGPU::VS_32RegClass) {
       AllUsesAcceptSReg = false;
       SDNode * User = *U;
       if (User->isMachineOpcode()) {
@@ -3030,8 +3026,7 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
           if (SII->findCommutedOpIndices(Desc, OpIdx, CommuteIdx1)) {
             unsigned CommutedOpNo = CommuteIdx1 - Desc.getNumDefs();
             const TargetRegisterClass *CommutedRC = getOperandRegClass(*U, CommutedOpNo);
-            if (CommutedRC == &AMDGPU::VS_32RegClass ||
-                CommutedRC == &AMDGPU::VS_64RegClass)
+            if (CommutedRC == &AMDGPU::VS_32RegClass)
               AllUsesAcceptSReg = true;
           }
         }

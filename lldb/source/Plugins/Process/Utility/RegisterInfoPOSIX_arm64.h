@@ -31,7 +31,6 @@ public:
     eRegsetMaskMTE = 8,
     eRegsetMaskTLS = 16,
     eRegsetMaskZA = 32,
-    eRegsetMaskZT = 64,
     eRegsetMaskDynamic = ~1,
   };
 
@@ -108,7 +107,7 @@ public:
 
   void AddRegSetTLS(bool has_tpidr2);
 
-  void AddRegSetSME(bool has_zt);
+  void AddRegSetSME();
 
   uint32_t ConfigureVectorLengthSVE(uint32_t sve_vq);
 
@@ -121,13 +120,12 @@ public:
     return false;
   }
 
-  bool IsSVEPresent() const { return m_opt_regsets.AnySet(eRegsetMaskSVE); }
-  bool IsSSVEPresent() const { return m_opt_regsets.AnySet(eRegsetMaskSSVE); }
-  bool IsZAPresent() const { return m_opt_regsets.AnySet(eRegsetMaskZA); }
-  bool IsZTPresent() const { return m_opt_regsets.AnySet(eRegsetMaskZT); }
-  bool IsPAuthPresent() const { return m_opt_regsets.AnySet(eRegsetMaskPAuth); }
-  bool IsMTEPresent() const { return m_opt_regsets.AnySet(eRegsetMaskMTE); }
-  bool IsTLSPresent() const { return m_opt_regsets.AnySet(eRegsetMaskTLS); }
+  bool IsSVEEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskSVE); }
+  bool IsSSVEEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskSSVE); }
+  bool IsZAEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskZA); }
+  bool IsPAuthEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskPAuth); }
+  bool IsMTEEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskMTE); }
+  bool IsTLSEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskTLS); }
 
   bool IsSVEReg(unsigned reg) const;
   bool IsSVEZReg(unsigned reg) const;
@@ -138,7 +136,6 @@ public:
   bool IsTLSReg(unsigned reg) const;
   bool IsSMEReg(unsigned reg) const;
   bool IsSMERegZA(unsigned reg) const;
-  bool IsSMERegZT(unsigned reg) const;
 
   uint32_t GetRegNumSVEZ0() const;
   uint32_t GetRegNumSVEFFR() const;

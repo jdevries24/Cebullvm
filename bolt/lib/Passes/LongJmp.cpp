@@ -293,7 +293,7 @@ uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
   for (BinaryFunction *Func : SortedFunctions) {
     if (!Func->isSplit())
       continue;
-    DotAddress = alignTo(DotAddress, Func->getMinAlignment());
+    DotAddress = alignTo(DotAddress, BinaryFunction::MinAlign);
     uint64_t Pad =
         offsetToAlignment(DotAddress, llvm::Align(Func->getAlignment()));
     if (Pad <= Func->getMaxColdAlignmentBytes())
@@ -352,7 +352,7 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
         DotAddress = alignTo(DotAddress, opts::AlignText);
     }
 
-    DotAddress = alignTo(DotAddress, Func->getMinAlignment());
+    DotAddress = alignTo(DotAddress, BinaryFunction::MinAlign);
     uint64_t Pad =
         offsetToAlignment(DotAddress, llvm::Align(Func->getAlignment()));
     if (Pad <= Func->getMaxAlignmentBytes())

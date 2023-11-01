@@ -208,7 +208,7 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   // to the number of slots in the buffer.
   bool IsMaster = (ThreadId == 0);
   while (IsMaster) {
-    Bound = atomic::load(&IterCnt, atomic::aquire);
+    Bound = atomic::load(&IterCnt, atomic::seq_cst);
     if (TeamId < Bound + num_of_records)
       break;
   }
@@ -220,6 +220,8 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     } else
       lgredFct(GlobalBuffer, ModBockId, reduce_data);
 
+    fence::system(atomic::seq_cst);
+
     // Increment team counter.
     // This counter is incremented by all teams in the current
     // BUFFER_SIZE chunk.
@@ -228,9 +230,7 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   }
   // Synchronize
   if (mapping::isSPMDMode())
-    synchronize::threadsAligned(atomic::acq_rel);
-  else
-    fence::kernel(atomic::acq_rel);
+    __kmpc_barrier(Loc, TId);
 
   // reduce_data is global or shared so before being reduced within the
   // warp we need to bring it in local memory:

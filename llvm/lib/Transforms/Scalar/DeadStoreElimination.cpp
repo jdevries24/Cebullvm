@@ -205,17 +205,16 @@ static bool isShortenableAtTheBeginning(Instruction *I) {
   return isa<AnyMemSetInst>(I);
 }
 
-static std::optional<TypeSize> getPointerSize(const Value *V,
-                                              const DataLayout &DL,
-                                              const TargetLibraryInfo &TLI,
-                                              const Function *F) {
+static uint64_t getPointerSize(const Value *V, const DataLayout &DL,
+                               const TargetLibraryInfo &TLI,
+                               const Function *F) {
   uint64_t Size;
   ObjectSizeOpts Opts;
   Opts.NullIsUnknownSize = NullPointerIsDefined(F);
 
   if (getObjectSize(V, Size, DL, &TLI, Opts))
-    return TypeSize::Fixed(Size);
-  return std::nullopt;
+    return Size;
+  return MemoryLocation::UnknownSize;
 }
 
 namespace {
@@ -866,7 +865,7 @@ struct DSEState {
   DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA, DominatorTree &DT,
            PostDominatorTree &PDT, AssumptionCache &AC,
            const TargetLibraryInfo &TLI, const LoopInfo &LI)
-      : F(F), AA(AA), EI(DT, &LI, &EphValues), BatchAA(AA, &EI), MSSA(MSSA),
+      : F(F), AA(AA), EI(DT, LI, EphValues), BatchAA(AA, &EI), MSSA(MSSA),
         DT(DT), PDT(PDT), TLI(TLI), DL(F.getParent()->getDataLayout()), LI(LI) {
     // Collect blocks with throwing instructions not modeled in MemorySSA and
     // alloc-like objects.
@@ -952,9 +951,9 @@ struct DSEState {
     // case the size/offset of the dead store does not matter.
     if (DeadUndObj == KillingUndObj && KillingLocSize.isPrecise() &&
         isIdentifiedObject(KillingUndObj)) {
-      std::optional<TypeSize> KillingUndObjSize =
-          getPointerSize(KillingUndObj, DL, TLI, &F);
-      if (KillingUndObjSize && *KillingUndObjSize == KillingLocSize.getValue())
+      uint64_t KillingUndObjSize = getPointerSize(KillingUndObj, DL, TLI, &F);
+      if (KillingUndObjSize != MemoryLocation::UnknownSize &&
+          KillingUndObjSize == KillingLocSize.getValue())
         return OW_Complete;
     }
 
@@ -977,15 +976,9 @@ struct DSEState {
       return isMaskedStoreOverwrite(KillingI, DeadI, BatchAA);
     }
 
-    const TypeSize KillingSize = KillingLocSize.getValue();
-    const TypeSize DeadSize = DeadLoc.Size.getValue();
-    // Bail on doing Size comparison which depends on AA for now
-    // TODO: Remove AnyScalable once Alias Analysis deal with scalable vectors
-    const bool AnyScalable =
-        DeadSize.isScalable() || KillingLocSize.isScalable();
+    const uint64_t KillingSize = KillingLocSize.getValue();
+    const uint64_t DeadSize = DeadLoc.Size.getValue();
 
-    if (AnyScalable)
-      return OW_Unknown;
     // Query the alias information
     AliasResult AAR = BatchAA.alias(KillingLoc, DeadLoc);
 

@@ -18,7 +18,6 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
-#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
 
 #include <future>

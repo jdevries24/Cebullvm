@@ -322,9 +322,7 @@ enum ValueType {
   eValueTypeRegister = 5,         ///< stack frame register value
   eValueTypeRegisterSet = 6, ///< A collection of stack frame register values
   eValueTypeConstResult = 7, ///< constant result variables
-  eValueTypeVariableThreadLocal = 8, ///< thread local storage variable
-  eValueTypeVTable = 9,              ///< virtual function table
-  eValueTypeVTableEntry = 10, ///< function pointer in virtual function table
+  eValueTypeVariableThreadLocal = 8 ///< thread local storage variable
 };
 
 /// Token size/granularities for Input Readers.
@@ -529,7 +527,6 @@ enum InstrumentationRuntimeType {
   eInstrumentationRuntimeTypeUndefinedBehaviorSanitizer = 0x0002,
   eInstrumentationRuntimeTypeMainThreadChecker = 0x0003,
   eInstrumentationRuntimeTypeSwiftRuntimeReporting = 0x0004,
-  eInstrumentationRuntimeTypeLibsanitizersAsan = 0x0005,
   eNumInstrumentationRuntimeTypes
 };
 

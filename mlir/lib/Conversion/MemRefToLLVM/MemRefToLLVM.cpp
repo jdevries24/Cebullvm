@@ -76,8 +76,6 @@ struct AlignedAllocOpLowering : public AllocLikeOpLLVMLowering {
         rewriter, loc, sizeBytes, op, &defaultLayout,
         alignedAllocationGetAlignment(rewriter, loc, cast<memref::AllocOp>(op),
                                       &defaultLayout));
-    if (!ptr)
-      return std::make_tuple(Value(), Value());
     return std::make_tuple(ptr, ptr);
   }
 
@@ -562,9 +560,9 @@ struct GetGlobalMemrefOpLowering : public AllocLikeOpLLVMLowering {
 
     // This is called after a type conversion, which would have failed if this
     // call fails.
-    FailureOr<unsigned> maybeAddressSpace =
+    std::optional<unsigned> maybeAddressSpace =
         getTypeConverter()->getMemRefAddressSpace(type);
-    if (failed(maybeAddressSpace))
+    if (!maybeAddressSpace)
       return std::make_tuple(Value(), Value());
     unsigned memSpace = *maybeAddressSpace;
 

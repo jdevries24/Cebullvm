@@ -83,7 +83,7 @@ public:
                                             const Expr *Init = nullptr);
 
   /// Returns or creates a dummy value for unknown declarations.
-  std::optional<unsigned> getOrCreateDummy(const ValueDecl *VD);
+  std::optional<unsigned> getOrCreateDummy(const ValueDecl *PD);
 
   /// Creates a global and returns its index.
   std::optional<unsigned> createGlobal(const ValueDecl *VD, const Expr *E);

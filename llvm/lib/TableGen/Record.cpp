@@ -806,12 +806,9 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
         OS << *Def->getDef();
         OS.flush();
         return StringInit::get(RK, S);
-      } else {
-        // Otherwise, print the value of the variable.
-        //
-        // NOTE: we could recursively !repr the elements of a list,
-        // but that could produce a lot of output when printing a
-        // defset.
+      }
+      // Otherwise, print the value of the variable.
+      else {
         return StringInit::get(RK, LHS->getAsString());
       }
     }
@@ -2263,9 +2260,9 @@ void VarDefInit::Profile(FoldingSetNodeID &ID) const {
 DefInit *VarDefInit::instantiate() {
   if (!Def) {
     RecordKeeper &Records = Class->getRecords();
-    auto NewRecOwner =
-        std::make_unique<Record>(Records.getNewAnonymousName(), Class->getLoc(),
-                                 Records, Record::RK_AnonymousDef);
+    auto NewRecOwner = std::make_unique<Record>(Records.getNewAnonymousName(),
+                                           Class->getLoc(), Records,
+                                           /*IsAnonymous=*/true);
     Record *NewRec = NewRecOwner.get();
 
     // Copy values from class to instance
@@ -2274,9 +2271,6 @@ DefInit *VarDefInit::instantiate() {
 
     // Copy assertions from class to instance.
     NewRec->appendAssertions(Class);
-
-    // Copy dumps from class to instance.
-    NewRec->appendDumps(Class);
 
     // Substitute and resolve template arguments
     ArrayRef<Init *> TArgs = Class->getTemplateArgs();
@@ -2311,9 +2305,6 @@ DefInit *VarDefInit::instantiate() {
 
     // Check the assertions.
     NewRec->checkRecordAssertions();
-
-    // Check the assertions.
-    NewRec->emitRecordDumps();
 
     Def = DefInit::get(NewRec);
   }
@@ -2872,11 +2863,6 @@ void Record::resolveReferences(Resolver &R, const RecordVal *SkipVal) {
     Value = Assertion.Message->resolveReferences(R);
     Assertion.Message = Value;
   }
-  // Resolve the dump expressions.
-  for (auto &Dump : Dumps) {
-    Init *Value = Dump.Message->resolveReferences(R);
-    Dump.Message = Value;
-  }
 }
 
 void Record::resolveReferences(Init *NewName) {
@@ -3130,16 +3116,6 @@ void Record::checkRecordAssertions() {
     Init *Condition = Assertion.Condition->resolveReferences(R);
     Init *Message = Assertion.Message->resolveReferences(R);
     CheckAssert(Assertion.Loc, Condition, Message);
-  }
-}
-
-void Record::emitRecordDumps() {
-  RecordResolver R(*this);
-  R.setFinal(true);
-
-  for (const auto &Dump : getDumps()) {
-    Init *Message = Dump.Message->resolveReferences(R);
-    dumpMessage(Dump.Loc, Message);
   }
 }
 

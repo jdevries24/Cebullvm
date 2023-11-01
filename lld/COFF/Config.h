@@ -316,7 +316,6 @@ struct Configuration {
   bool stdcallFixup = false;
   bool writeCheckSum = false;
   EmitKind emit = EmitKind::Obj;
-  bool allowDuplicateWeak = false;
 };
 
 } // namespace lld::coff

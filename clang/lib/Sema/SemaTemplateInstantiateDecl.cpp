@@ -563,16 +563,18 @@ static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
   S.addAMDGPUFlatWorkGroupSizeAttr(New, Attr, MinExpr, MaxExpr);
 }
 
-ExplicitSpecifier Sema::instantiateExplicitSpecifier(
-    const MultiLevelTemplateArgumentList &TemplateArgs, ExplicitSpecifier ES) {
+static ExplicitSpecifier
+instantiateExplicitSpecifier(Sema &S,
+                             const MultiLevelTemplateArgumentList &TemplateArgs,
+                             ExplicitSpecifier ES, FunctionDecl *New) {
   if (!ES.getExpr())
     return ES;
   Expr *OldCond = ES.getExpr();
   Expr *Cond = nullptr;
   {
     EnterExpressionEvaluationContext Unevaluated(
-        *this, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-    ExprResult SubstResult = SubstExpr(OldCond, TemplateArgs);
+        S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+    ExprResult SubstResult = S.SubstExpr(OldCond, TemplateArgs);
     if (SubstResult.isInvalid()) {
       return ExplicitSpecifier::Invalid();
     }
@@ -580,7 +582,7 @@ ExplicitSpecifier Sema::instantiateExplicitSpecifier(
   }
   ExplicitSpecifier Result(Cond, ES.getKind());
   if (!Cond->isTypeDependent())
-    tryResolveExplicitSpecifier(Result);
+    S.tryResolveExplicitSpecifier(Result);
   return Result;
 }
 
@@ -2071,8 +2073,8 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
 
   ExplicitSpecifier InstantiatedExplicitSpecifier;
   if (auto *DGuide = dyn_cast<CXXDeductionGuideDecl>(D)) {
-    InstantiatedExplicitSpecifier = SemaRef.instantiateExplicitSpecifier(
-        TemplateArgs, DGuide->getExplicitSpecifier());
+    InstantiatedExplicitSpecifier = instantiateExplicitSpecifier(
+        SemaRef, TemplateArgs, DGuide->getExplicitSpecifier(), DGuide);
     if (InstantiatedExplicitSpecifier.isInvalid())
       return nullptr;
   }
@@ -2451,25 +2453,11 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
     }
   }
 
-  auto InstantiatedExplicitSpecifier = ExplicitSpecifier::getFromDecl(D);
-  // deduction guides need this
-  const bool CouldInstantiate =
-      InstantiatedExplicitSpecifier.getExpr() == nullptr ||
-      !InstantiatedExplicitSpecifier.getExpr()->isValueDependent();
-
-  // Delay the instantiation of the explicit-specifier until after the
-  // constraints are checked during template argument deduction.
-  if (CouldInstantiate ||
-      SemaRef.CodeSynthesisContexts.back().Kind !=
-          Sema::CodeSynthesisContext::DeducedTemplateArgumentSubstitution) {
-    InstantiatedExplicitSpecifier = SemaRef.instantiateExplicitSpecifier(
-        TemplateArgs, InstantiatedExplicitSpecifier);
-
-    if (InstantiatedExplicitSpecifier.isInvalid())
-      return nullptr;
-  } else {
-    InstantiatedExplicitSpecifier.setKind(ExplicitSpecKind::Unresolved);
-  }
+  ExplicitSpecifier InstantiatedExplicitSpecifier =
+      instantiateExplicitSpecifier(SemaRef, TemplateArgs,
+                                   ExplicitSpecifier::getFromDecl(D), D);
+  if (InstantiatedExplicitSpecifier.isInvalid())
+    return nullptr;
 
   // Implicit destructors/constructors created for local classes in
   // DeclareImplicit* (see SemaDeclCXX.cpp) might not have an associated TSI.
@@ -3639,7 +3627,7 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
     SemaRef.CurrentInstantiationScope->InstantiatedLocal(
         cast<DeclRefExpr>(D->getInitPriv())->getDecl(),
         cast<DeclRefExpr>(NewDRD->getInitPriv())->getDecl());
-    if (D->getInitializerKind() == OMPDeclareReductionInitKind::Call) {
+    if (D->getInitializerKind() == OMPDeclareReductionDecl::CallInit) {
       SubstInitializer = SemaRef.SubstExpr(Init, TemplateArgs).get();
     } else {
       auto *OldPrivParm =
@@ -3654,9 +3642,9 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
   }
   IsCorrect = IsCorrect && SubstCombiner &&
               (!Init ||
-               (D->getInitializerKind() == OMPDeclareReductionInitKind::Call &&
+               (D->getInitializerKind() == OMPDeclareReductionDecl::CallInit &&
                 SubstInitializer) ||
-               (D->getInitializerKind() != OMPDeclareReductionInitKind::Call &&
+               (D->getInitializerKind() != OMPDeclareReductionDecl::CallInit &&
                 !SubstInitializer));
 
   (void)SemaRef.ActOnOpenMPDeclareReductionDirectiveEnd(
@@ -4638,8 +4626,7 @@ bool Sema::InstantiateDefaultArgument(SourceLocation CallLoc, FunctionDecl *FD,
   // template<typename T>
   // A<T> Foo(int a = A<T>::FooImpl());
   MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
-      FD, FD->getLexicalDeclContext(), /*Final=*/false, nullptr,
-      /*RelativeToPrimary=*/true);
+      FD, /*Final=*/false, nullptr, /*RelativeToPrimary=*/true);
 
   if (SubstDefaultArgument(CallLoc, Param, TemplateArgs, /*ForCallExpr*/ true))
     return true;
@@ -4678,8 +4665,7 @@ void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
   LocalInstantiationScope Scope(*this);
 
   MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
-      Decl, Decl->getLexicalDeclContext(), /*Final=*/false, nullptr,
-      /*RelativeToPrimary*/ true);
+      Decl, /*Final=*/false, nullptr, /*RelativeToPrimary*/ true);
 
   // FIXME: We can't use getTemplateInstantiationPattern(false) in general
   // here, because for a non-defining friend declaration in a class template,
@@ -5121,8 +5107,7 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
     SetDeclDefaulted(Function, PatternDecl->getLocation());
   } else {
     MultiLevelTemplateArgumentList TemplateArgs = getTemplateInstantiationArgs(
-        Function, Function->getLexicalDeclContext(), /*Final=*/false, nullptr,
-        false, PatternDecl);
+        Function, /*Final=*/false, nullptr, false, PatternDecl);
 
     // Substitute into the qualifier; we can get a substitution failure here
     // through evil use of alias templates.

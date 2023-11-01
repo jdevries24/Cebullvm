@@ -15,19 +15,55 @@ using namespace mlir::sparse_tensor;
 
 namespace {
 
-template <typename StageWithSortOp>
-struct StageUnorderedSparseOps : public OpRewritePattern<StageWithSortOp> {
-  using OpRewritePattern<StageWithSortOp>::OpRewritePattern;
+struct StageUnorderedConvert : public OpRewritePattern<ConvertOp> {
+  using OpRewritePattern<ConvertOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(StageWithSortOp op,
+  LogicalResult matchAndRewrite(ConvertOp op,
                                 PatternRewriter &rewriter) const override {
-    return llvm::cast<StageWithSortSparseOp>(op.getOperation())
-        .stageWithSort(rewriter);
+    // TODO: Implement it as an Interface, this can be reused from other
+    // operations too (e.g., concatenate, reshape, etc).
+
+    if (op.directConvertable() || op.isSortCOOConvert())
+      return failure();
+
+    Location loc = op.getLoc();
+    SparseTensorType srcStt = getSparseTensorType(op.getSource());
+    SparseTensorType dstStt = getSparseTensorType(op.getDest());
+
+    // Just to make sure that convert to dense tensor is always direct.
+    assert(!dstStt.isAllDense());
+
+    // source -> coo
+    // The tmp COO must be unordered, otherwise it is a direct conversion.
+    assert(!(srcStt.hasSameDimToLvl(dstStt) && srcStt.isAllOrdered()));
+    (void)srcStt; // to silence warning when assertion is disabled
+
+    Type srcCOOTp = getCOOFromTypeWithOrdering(
+        dstStt.getRankedTensorType(), dstStt.getDimToLvl(), /*ordered=*/false);
+    Value srcCOO = rewriter.create<ConvertOp>(loc, srcCOOTp, op.getSource());
+
+    // -> sort
+    Type dstCOOTp = getCOOFromTypeWithOrdering(
+        dstStt.getRankedTensorType(), dstStt.getDimToLvl(), /*ordered=*/true);
+    // TODO: this should be a sort_coo operation.
+    Value dstCOO = rewriter.create<ConvertOp>(loc, dstCOOTp, srcCOO);
+
+    // -> dest.
+    if (dstCOO.getType() == op.getType()) {
+      rewriter.replaceOp(op, dstCOO);
+    } else {
+      // Need an extra conversion if the target type is not COO.
+      rewriter.replaceOpWithNewOp<ConvertOp>(op, op.getDest().getType(),
+                                             dstCOO);
+    }
+    // TODO: deallocate extra COOs, we should probably delegate it to buffer
+    // deallocation pass.
+
+    return success();
   }
 };
 } // namespace
 
 void mlir::populateStageSparseOperationsPatterns(RewritePatternSet &patterns) {
-  patterns.add<StageUnorderedSparseOps<ConvertOp>,
-               StageUnorderedSparseOps<ConcatenateOp>>(patterns.getContext());
+  patterns.add<StageUnorderedConvert>(patterns.getContext());
 }

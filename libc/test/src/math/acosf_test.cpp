@@ -17,11 +17,13 @@
 #include <errno.h>
 #include <stdint.h>
 
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
+
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-using LlvmLibcAcosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
+DECLARE_SPECIAL_CONSTANTS(float)
 
-TEST_F(LlvmLibcAcosfTest, SpecialNumbers) {
+TEST(LlvmLibcAcosfTest, SpecialNumbers) {
   libc_errno = 0;
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::acosf(aNaN));
@@ -43,7 +45,7 @@ TEST_F(LlvmLibcAcosfTest, SpecialNumbers) {
   EXPECT_MATH_ERRNO(EDOM);
 }
 
-TEST_F(LlvmLibcAcosfTest, InFloatRange) {
+TEST(LlvmLibcAcosfTest, InFloatRange) {
   constexpr uint32_t COUNT = 100'000;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
@@ -55,7 +57,7 @@ TEST_F(LlvmLibcAcosfTest, InFloatRange) {
   }
 }
 
-TEST_F(LlvmLibcAcosfTest, SpecificBitPatterns) {
+TEST(LlvmLibcAcosfTest, SpecificBitPatterns) {
   constexpr int N = 13;
   constexpr uint32_t INPUTS[N] = {
       0x3f000000, // x = 0.5f

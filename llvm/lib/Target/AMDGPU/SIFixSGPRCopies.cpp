@@ -125,7 +125,7 @@ class SIFixSGPRCopies : public MachineFunctionPass {
   SmallVector<MachineInstr*, 4> PHINodes;
   SmallVector<MachineInstr*, 4> S2VCopies;
   unsigned NextVGPRToSGPRCopyID;
-  MapVector<unsigned, V2SCopyInfo> V2SCopies;
+  DenseMap<unsigned, V2SCopyInfo> V2SCopies;
   DenseMap<MachineInstr *, SetVector<unsigned>> SiblingPenalty;
 
 public:
@@ -357,7 +357,7 @@ static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
     return false;
 
   // FIXME: Handle copies with sub-regs.
-  if (Copy->getOperand(1).getSubReg())
+  if (Copy->getOperand(0).getSubReg())
     return false;
 
   switch (MoveImm->getOpcode()) {
@@ -367,7 +367,7 @@ static bool isSafeToFoldImmIntoCopy(const MachineInstr *Copy,
     SMovOp = AMDGPU::S_MOV_B32;
     break;
   case AMDGPU::V_MOV_B64_PSEUDO:
-    SMovOp = AMDGPU::S_MOV_B64_IMM_PSEUDO;
+    SMovOp = AMDGPU::S_MOV_B64;
     break;
   }
   Imm = ImmOp->getImm();
@@ -988,7 +988,7 @@ bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
   for (auto J : Info->Siblings) {
     auto InfoIt = V2SCopies.find(J);
     if (InfoIt != V2SCopies.end()) {
-      MachineInstr *SiblingCopy = InfoIt->second.Copy;
+      MachineInstr *SiblingCopy = InfoIt->getSecond().Copy;
       if (SiblingCopy->isImplicitDef())
         // the COPY has already been MoveToVALUed
         continue;
@@ -1023,12 +1023,12 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
     unsigned CurID = LoweringWorklist.pop_back_val();
     auto CurInfoIt = V2SCopies.find(CurID);
     if (CurInfoIt != V2SCopies.end()) {
-      V2SCopyInfo C = CurInfoIt->second;
+      V2SCopyInfo C = CurInfoIt->getSecond();
       LLVM_DEBUG(dbgs() << "Processing ...\n"; C.dump());
       for (auto S : C.Siblings) {
         auto SibInfoIt = V2SCopies.find(S);
         if (SibInfoIt != V2SCopies.end()) {
-          V2SCopyInfo &SI = SibInfoIt->second;
+          V2SCopyInfo &SI = SibInfoIt->getSecond();
           LLVM_DEBUG(dbgs() << "Sibling:\n"; SI.dump());
           if (!SI.NeedToBeConvertedToVALU) {
             SI.SChain.set_subtract(C.SChain);
@@ -1040,8 +1040,6 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
       }
       LLVM_DEBUG(dbgs() << "V2S copy " << *C.Copy
                         << " is being turned to VALU\n");
-      // TODO: MapVector::erase is inefficient. Do bulk removal with remove_if
-      // instead.
       V2SCopies.erase(C.ID);
       Copies.insert(C.Copy);
     }

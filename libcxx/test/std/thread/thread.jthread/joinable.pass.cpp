@@ -19,7 +19,6 @@
 #include <thread>
 #include <type_traits>
 
-#include "make_test_thread.h"
 #include "test_macros.h"
 
 static_assert(noexcept(std::declval<const std::jthread&>().joinable()));
@@ -34,7 +33,7 @@ int main(int, char**) {
 
   // Non-default constructed
   {
-    const std::jthread jt                    = support::make_test_jthread([] {});
+    const std::jthread jt{[] {}};
     std::same_as<bool> decltype(auto) result = jt.joinable();
     assert(result);
   }
@@ -42,8 +41,8 @@ int main(int, char**) {
   // Non-default constructed
   // the thread of execution has not finished
   {
-    std::atomic_bool done                    = false;
-    const std::jthread jt                    = support::make_test_jthread([&done] { done.wait(false); });
+    std::atomic_bool done = false;
+    const std::jthread jt{[&done] { done.wait(false); }};
     std::same_as<bool> decltype(auto) result = jt.joinable();
     done                                     = true;
     done.notify_all();

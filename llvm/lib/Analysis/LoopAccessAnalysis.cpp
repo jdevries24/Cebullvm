@@ -14,6 +14,7 @@
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
@@ -21,6 +22,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AliasSetTracker.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
@@ -2532,7 +2534,7 @@ void LoopAccessInfo::emitUnsafeDependenceRemark() {
       HasForcedDistribution
           ? "unsafe dependent memory operations in loop."
           : "unsafe dependent memory operations in loop. Use "
-            "#pragma clang loop distribute(enable) to allow loop distribution "
+            "#pragma loop distribute(enable) to allow loop distribution "
             "to attempt to isolate the offending operations into a separate "
             "loop";
   OptimizationRemarkAnalysis &R =

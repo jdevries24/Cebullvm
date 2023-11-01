@@ -16,9 +16,11 @@
 #include <errno.h>
 #include <stdint.h>
 
-using LlvmLibcExp2Test = LIBC_NAMESPACE::testing::FPTest<double>;
+using LIBC_NAMESPACE::testing::tlog;
 
-TEST_F(LlvmLibcExp2Test, SpecialNumbers) {
+DECLARE_SPECIAL_CONSTANTS(double)
+
+TEST(LlvmLibcExp2Test, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::exp2(aNaN));
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::exp2(inf));
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::exp2(neg_inf));

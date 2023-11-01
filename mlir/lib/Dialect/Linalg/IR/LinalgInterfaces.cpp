@@ -32,7 +32,6 @@ using namespace mlir::linalg;
 //===----------------------------------------------------------------------===//
 // Interface utility functions
 //===----------------------------------------------------------------------===//
-
 bool linalg::detail::canOpOperandsBeDroppedImpl(
     linalg::LinalgOp linalgOp, ArrayRef<OpOperand *> droppedOperands) {
   SmallVector<AffineMap> indexingMaps;
@@ -47,27 +46,6 @@ bool linalg::detail::canOpOperandsBeDroppedImpl(
     return linalgOp.getNumLoops() == 0;
   }
   return inversePermutation(concatAffineMaps(indexingMaps)) != AffineMap();
-}
-
-//===----------------------------------------------------------------------===//
-// CopyOpInterface implementation
-//===----------------------------------------------------------------------===//
-
-bool linalg::isaCopyOpInterface(LinalgOp linalgOp) {
-  // Structural.
-  if (linalgOp.getNumParallelLoops() != linalgOp.getNumLoops())
-    return false;
-
-  // Operands and maps.
-  if (linalgOp.getNumDpsInputs() != 1 || linalgOp.getNumDpsInits() != 1)
-    return false;
-  auto mapRange = linalgOp.getIndexingMapsArray();
-  if (mapRange.size() != 2 || !mapRange.front().isIdentity() ||
-      !mapRange.back().isIdentity()) {
-    return false;
-  }
-  // Region.
-  return llvm::hasSingleElement(linalgOp.getBlock()->getOperations());
 }
 
 //===----------------------------------------------------------------------===//
@@ -248,6 +226,9 @@ mlir::linalg::inferContractionDims(LinalgOp linalgOp) {
   llvm::SmallDenseSet<int64_t> rb = findPermutationsIndexingOperand(
       linalgOp, linalgOp.getDpsInputOperand(1), red);
   llvm::set_intersect(ra, rb);
+
+  if (ac.empty() || bc.empty() || ra.empty())
+    return failure();
 
   // Return each set in sorted order.
   ContractionDimensions dimensions{

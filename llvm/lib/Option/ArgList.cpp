@@ -138,8 +138,11 @@ void ArgList::addAllArgs(ArgStringList &Output,
   AddAllArgsExcept(Output, Ids, Exclude);
 }
 
-void ArgList::AddAllArgs(ArgStringList &Output, OptSpecifier Id0) const {
-  for (auto *Arg : filtered(Id0)) {
+/// This 3-opt variant of AddAllArgs could be eliminated in favor of one
+/// that accepts a single specifier, given the above which accepts any number.
+void ArgList::AddAllArgs(ArgStringList &Output, OptSpecifier Id0,
+                         OptSpecifier Id1, OptSpecifier Id2) const {
+  for (auto *Arg : filtered(Id0, Id1, Id2)) {
     Arg->claim();
     Arg->render(*this, Output);
   }

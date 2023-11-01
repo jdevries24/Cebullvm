@@ -97,7 +97,6 @@ private:
   const unsigned TargetMaxInstBytes;
   mutable ArrayRef<uint8_t> Bytes;
   mutable uint32_t Literal;
-  mutable uint64_t Literal64;
   mutable bool HasLiteral;
   mutable std::optional<bool> EnableWavefrontSize32;
 
@@ -230,15 +229,15 @@ public:
   static MCOperand decodeFPImmed(unsigned ImmWidth, unsigned Imm);
 
   MCOperand decodeMandatoryLiteralConstant(unsigned Imm) const;
-  MCOperand decodeLiteralConstant(bool ExtendFP64) const;
+  MCOperand decodeLiteralConstant() const;
 
   MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val,
-                        bool MandatoryLiteral = false, unsigned ImmWidth = 0,
-                        bool IsFP = false) const;
+                        bool MandatoryLiteral = false,
+                        unsigned ImmWidth = 0) const;
 
   MCOperand decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
                                bool MandatoryLiteral = false,
-                               unsigned ImmWidth = 0, bool IsFP = false) const;
+                               unsigned ImmWidth = 0) const;
 
   MCOperand decodeVOPDDstYOp(MCInst &Inst, unsigned Val) const;
   MCOperand decodeSpecialReg32(unsigned Val) const;

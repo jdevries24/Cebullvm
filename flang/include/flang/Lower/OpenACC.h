@@ -37,7 +37,6 @@ namespace Fortran {
 namespace parser {
 struct OpenACCConstruct;
 struct OpenACCDeclarativeConstruct;
-struct OpenACCRoutineConstruct;
 } // namespace parser
 
 namespace semantics {
@@ -72,11 +71,6 @@ void genOpenACCDeclarativeConstruct(AbstractConverter &,
                                     StatementContext &,
                                     const parser::OpenACCDeclarativeConstruct &,
                                     AccRoutineInfoMappingList &);
-void genOpenACCRoutineConstruct(AbstractConverter &,
-                                Fortran::semantics::SemanticsContext &,
-                                mlir::ModuleOp &,
-                                const parser::OpenACCRoutineConstruct &,
-                                AccRoutineInfoMappingList &);
 
 void finalizeOpenACCRoutineAttachment(mlir::ModuleOp &,
                                       AccRoutineInfoMappingList &);

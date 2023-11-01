@@ -504,20 +504,18 @@ public:
   template <typename OpTy, typename... Args>
   void createOrFold(SmallVectorImpl<Value> &results, Location location,
                     Args &&...args) {
-    // Create the operation without using 'create' as we want to control when
-    // the listener is notified.
+    // Create the operation without using 'create' as we don't want to
+    // insert it yet.
     OperationState state(location,
                          getCheckRegisteredInfo<OpTy>(location.getContext()));
     OpTy::build(*this, state, std::forward<Args>(args)...);
     Operation *op = Operation::create(state);
-    if (block)
-      block->getOperations().insert(insertPoint, op);
 
-    // Fold the operation. If successful erase it, otherwise notify.
+    // Fold the operation. If successful destroy it, otherwise insert it.
     if (succeeded(tryFold(op, results)))
-      op->erase();
-    else if (listener)
-      listener->notifyOperationInserted(op);
+      op->destroy();
+    else
+      insert(op);
   }
 
   /// Overload to create or fold a single result operation.

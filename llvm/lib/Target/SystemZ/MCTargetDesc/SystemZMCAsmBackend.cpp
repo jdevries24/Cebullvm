@@ -107,7 +107,8 @@ static uint64_t extractBitsForFixup(MCFixupKind Kind, uint64_t Value,
 namespace {
 class SystemZMCAsmBackend : public MCAsmBackend {
 public:
-  SystemZMCAsmBackend() : MCAsmBackend(llvm::endianness::big) {}
+  SystemZMCAsmBackend()
+      : MCAsmBackend(support::big) {}
 
   // Override MCAsmBackend
   unsigned getNumFixupKinds() const override {

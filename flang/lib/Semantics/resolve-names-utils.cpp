@@ -779,7 +779,6 @@ public:
     return false;
   }
   void MapSymbolExprs(Symbol &);
-  Symbol *CopySymbol(const Symbol *);
 
 private:
   void MapParamValue(ParamValue &param) const { (*this)(param.GetExplicit()); }
@@ -798,44 +797,16 @@ private:
   SymbolAndTypeMappings &map_;
 };
 
-Symbol *SymbolMapper::CopySymbol(const Symbol *symbol) {
-  if (symbol) {
-    if (auto *subp{symbol->detailsIf<SubprogramDetails>()}) {
-      if (subp->isInterface()) {
-        if (auto pair{scope_.try_emplace(symbol->name(), symbol->attrs())};
-            pair.second) {
-          Symbol &copy{*pair.first->second};
-          map_.symbolMap[symbol] = &copy;
-          copy.set(symbol->test(Symbol::Flag::Subroutine)
-                  ? Symbol::Flag::Subroutine
-                  : Symbol::Flag::Function);
-          Scope &newScope{scope_.MakeScope(Scope::Kind::Subprogram, &copy)};
-          copy.set_scope(&newScope);
-          copy.set_details(SubprogramDetails{});
-          auto &newSubp{copy.get<SubprogramDetails>()};
-          newSubp.set_isInterface(true);
-          newSubp.set_isDummy(subp->isDummy());
-          newSubp.set_defaultIgnoreTKR(subp->defaultIgnoreTKR());
-          MapSubprogramToNewSymbols(*symbol, copy, newScope, &map_);
-          return &copy;
-        }
+void SymbolMapper::MapSymbolExprs(Symbol &symbol) {
+  if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+    if (const DeclTypeSpec *type{object->type()}) {
+      if (const DeclTypeSpec *newType{MapType(*type)}) {
+        object->ReplaceType(*newType);
       }
-    } else if (Symbol * copy{scope_.CopySymbol(*symbol)}) {
-      map_.symbolMap[symbol] = copy;
-      return copy;
     }
   }
-  return nullptr;
-}
-
-void SymbolMapper::MapSymbolExprs(Symbol &symbol) {
   common::visit(
       common::visitors{[&](ObjectEntityDetails &object) {
-                         if (const DeclTypeSpec * type{object.type()}) {
-                           if (const DeclTypeSpec * newType{MapType(*type)}) {
-                             object.ReplaceType(*newType);
-                           }
-                         }
                          for (ShapeSpec &spec : object.shape()) {
                            MapShapeSpec(spec);
                          }
@@ -921,7 +892,13 @@ const Symbol *SymbolMapper::MapInterface(const Symbol *interface) {
       return interface;
     } else if (const auto *subp{interface->detailsIf<SubprogramDetails>()};
                subp && subp->isInterface()) {
-      return CopySymbol(interface);
+      if (Symbol *newSymbol{scope_.CopySymbol(*interface)}) {
+        newSymbol->get<SubprogramDetails>().set_isInterface(true);
+        map_.symbolMap[interface] = newSymbol;
+        Scope &newScope{scope_.MakeScope(Scope::Kind::Subprogram, newSymbol)};
+        MapSubprogramToNewSymbols(*interface, *newSymbol, newScope, &map_);
+        return newSymbol;
+      }
     }
   }
   return nullptr;
@@ -936,11 +913,10 @@ void MapSubprogramToNewSymbols(const Symbol &oldSymbol, Symbol &newSymbol,
   mappings->symbolMap[&oldSymbol] = &newSymbol;
   const auto &oldDetails{oldSymbol.get<SubprogramDetails>()};
   auto &newDetails{newSymbol.get<SubprogramDetails>()};
-  SymbolMapper mapper{newScope, *mappings};
   for (const Symbol *dummyArg : oldDetails.dummyArgs()) {
     if (!dummyArg) {
       newDetails.add_alternateReturn();
-    } else if (Symbol * copy{mapper.CopySymbol(dummyArg)}) {
+    } else if (Symbol *copy{newScope.CopySymbol(*dummyArg)}) {
       copy->set(Symbol::Flag::Implicit, false);
       newDetails.add_dummyArg(*copy);
       mappings->symbolMap[dummyArg] = copy;
@@ -948,12 +924,12 @@ void MapSubprogramToNewSymbols(const Symbol &oldSymbol, Symbol &newSymbol,
   }
   if (oldDetails.isFunction()) {
     newScope.erase(newSymbol.name());
-    const Symbol &result{oldDetails.result()};
-    if (Symbol * copy{mapper.CopySymbol(&result)}) {
+    if (Symbol *copy{newScope.CopySymbol(oldDetails.result())}) {
       newDetails.set_result(*copy);
-      mappings->symbolMap[&result] = copy;
+      mappings->symbolMap[&oldDetails.result()] = copy;
     }
   }
+  SymbolMapper mapper{newScope, *mappings};
   for (auto &[_, ref] : newScope) {
     mapper.MapSymbolExprs(*ref);
   }

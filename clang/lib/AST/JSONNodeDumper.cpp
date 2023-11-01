@@ -315,16 +315,12 @@ std::string JSONNodeDumper::createPointerRepresentation(const void *Ptr) {
 
 llvm::json::Object JSONNodeDumper::createQualType(QualType QT, bool Desugar) {
   SplitQualType SQT = QT.split();
-  std::string SQTS = QualType::getAsString(SQT, PrintPolicy);
-  llvm::json::Object Ret{{"qualType", SQTS}};
+  llvm::json::Object Ret{{"qualType", QualType::getAsString(SQT, PrintPolicy)}};
 
   if (Desugar && !QT.isNull()) {
     SplitQualType DSQT = QT.getSplitDesugaredType();
-    if (DSQT != SQT) {
-      std::string DSQTS = QualType::getAsString(DSQT, PrintPolicy);
-      if (DSQTS != SQTS)
-        Ret["desugaredQualType"] = DSQTS;
-    }
+    if (DSQT != SQT)
+      Ret["desugaredQualType"] = QualType::getAsString(DSQT, PrintPolicy);
     if (const auto *TT = QT->getAs<TypedefType>())
       Ret["typeAliasDeclId"] = createPointerRepresentation(TT->getDecl());
   }
@@ -646,13 +642,13 @@ void JSONNodeDumper::VisitRValueReferenceType(const ReferenceType *RT) {
 
 void JSONNodeDumper::VisitArrayType(const ArrayType *AT) {
   switch (AT->getSizeModifier()) {
-  case ArraySizeModifier::Star:
+  case ArrayType::Star:
     JOS.attribute("sizeModifier", "*");
     break;
-  case ArraySizeModifier::Static:
+  case ArrayType::Static:
     JOS.attribute("sizeModifier", "static");
     break;
-  case ArraySizeModifier::Normal:
+  case ArrayType::Normal:
     break;
   }
 
@@ -677,30 +673,30 @@ void JSONNodeDumper::VisitDependentSizedExtVectorType(
 void JSONNodeDumper::VisitVectorType(const VectorType *VT) {
   JOS.attribute("numElements", VT->getNumElements());
   switch (VT->getVectorKind()) {
-  case VectorKind::Generic:
+  case VectorType::GenericVector:
     break;
-  case VectorKind::AltiVecVector:
+  case VectorType::AltiVecVector:
     JOS.attribute("vectorKind", "altivec");
     break;
-  case VectorKind::AltiVecPixel:
+  case VectorType::AltiVecPixel:
     JOS.attribute("vectorKind", "altivec pixel");
     break;
-  case VectorKind::AltiVecBool:
+  case VectorType::AltiVecBool:
     JOS.attribute("vectorKind", "altivec bool");
     break;
-  case VectorKind::Neon:
+  case VectorType::NeonVector:
     JOS.attribute("vectorKind", "neon");
     break;
-  case VectorKind::NeonPoly:
+  case VectorType::NeonPolyVector:
     JOS.attribute("vectorKind", "neon poly");
     break;
-  case VectorKind::SveFixedLengthData:
+  case VectorType::SveFixedLengthDataVector:
     JOS.attribute("vectorKind", "fixed-length sve data vector");
     break;
-  case VectorKind::SveFixedLengthPredicate:
+  case VectorType::SveFixedLengthPredicateVector:
     JOS.attribute("vectorKind", "fixed-length sve predicate vector");
     break;
-  case VectorKind::RVVFixedLengthData:
+  case VectorType::RVVFixedLengthDataVector:
     JOS.attribute("vectorKind", "fixed-length rvv data vector");
     break;
   }
@@ -1027,12 +1023,8 @@ void JSONNodeDumper::VisitTemplateTemplateParmDecl(
 void JSONNodeDumper::VisitLinkageSpecDecl(const LinkageSpecDecl *LSD) {
   StringRef Lang;
   switch (LSD->getLanguage()) {
-  case LinkageSpecLanguageIDs::C:
-    Lang = "C";
-    break;
-  case LinkageSpecLanguageIDs::CXX:
-    Lang = "C++";
-    break;
+  case LinkageSpecDecl::lang_c: Lang = "C"; break;
+  case LinkageSpecDecl::lang_cxx: Lang = "C++"; break;
   }
   JOS.attribute("language", Lang);
   attributeOnlyIfTrue("hasBraces", LSD->hasBraces());

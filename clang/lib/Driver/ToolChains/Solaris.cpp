@@ -96,8 +96,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!LinkerIsGnuLd)
     CmdArgs.push_back("-C");
 
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_shared,
-                   options::OPT_r)) {
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_shared)) {
     CmdArgs.push_back("-e");
     CmdArgs.push_back("_start");
   }
@@ -115,8 +114,10 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-Bstatic");
     CmdArgs.push_back("-dn");
   } else {
-    if (!Args.hasArg(options::OPT_r) && Args.hasArg(options::OPT_shared))
+    CmdArgs.push_back("-Bdynamic");
+    if (Args.hasArg(options::OPT_shared)) {
       CmdArgs.push_back("-shared");
+    }
 
     // libpthread has been folded into libc since Solaris 10, no need to do
     // anything for pthreads. Claim argument to avoid warning.
@@ -126,7 +127,8 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (LinkerIsGnuLd) {
     // Set the correct linker emulation for 32- and 64-bit Solaris.
-    const auto &ToolChain = static_cast<const Solaris &>(getToolChain());
+    const toolchains::Solaris &ToolChain =
+        static_cast<const toolchains::Solaris &>(getToolChain());
     const llvm::Triple::ArchType Arch = ToolChain.getArch();
 
     switch (Arch) {
@@ -218,16 +220,6 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (D.CCCIsCXX()) {
       if (getToolChain().ShouldLinkCXXStdlib(Args))
         getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
-      CmdArgs.push_back("-lm");
-    }
-    // Silence warnings when linking C code with a C++ '-stdlib' argument.
-    Args.ClaimAllArgs(options::OPT_stdlib_EQ);
-    // Additional linker set-up and flags for Fortran. This is required in order
-    // to generate executables. As Fortran runtime depends on the C runtime,
-    // these dependencies need to be listed before the C runtime below.
-    if (D.IsFlangMode()) {
-      addFortranRuntimeLibraryPath(getToolChain(), Args, CmdArgs);
-      addFortranRuntimeLibs(getToolChain(), CmdArgs);
       CmdArgs.push_back("-lm");
     }
     if (Args.hasArg(options::OPT_fstack_protector) ||

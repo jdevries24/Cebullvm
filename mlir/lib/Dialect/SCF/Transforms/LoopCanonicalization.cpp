@@ -36,9 +36,10 @@ using namespace mlir::scf;
 /// type of the corresponding basic block argument of the loop.
 /// Note: This function handles only simple cases. Expand as needed.
 static bool isShapePreserving(ForOp forOp, int64_t arg) {
-  assert(arg < static_cast<int64_t>(forOp.getNumResults()) &&
+  auto yieldOp = cast<YieldOp>(forOp.getBody()->getTerminator());
+  assert(arg < static_cast<int64_t>(yieldOp.getResults().size()) &&
          "arg is out of bounds");
-  Value value = forOp.getYieldedValues()[arg];
+  Value value = yieldOp.getResults()[arg];
   while (value) {
     if (value == forOp.getRegionIterArgs()[arg])
       return true;
@@ -98,7 +99,7 @@ struct DimOfIterArgFolder : public OpRewritePattern<OpTy> {
     if (!isShapePreserving(forOp, blockArg.getArgNumber() - 1))
       return failure();
 
-    Value initArg = forOp.getTiedLoopInit(blockArg)->get();
+    Value initArg = forOp.getOpOperandForRegionIterArg(blockArg).get();
     rewriter.updateRootInPlace(
         dimOp, [&]() { dimOp.getSourceMutable().assign(initArg); });
 

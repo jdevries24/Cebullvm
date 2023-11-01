@@ -83,7 +83,6 @@ endif()
 list(REMOVE_DUPLICATES LIBOMPTARGET_DEVICE_ARCHITECTURES)
 
 set(include_files
-  ${include_directory}/Allocator.h
   ${include_directory}/Configuration.h
   ${include_directory}/Debug.h
   ${include_directory}/Interface.h
@@ -96,7 +95,6 @@ set(include_files
 )
 
 set(src_files
-  ${source_directory}/Allocator.cpp
   ${source_directory}/Configuration.cpp
   ${source_directory}/Debug.cpp
   ${source_directory}/Kernel.cpp
@@ -232,7 +230,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
 
   set(target_feature "")
   if("${target_triple}" STREQUAL "nvptx64-nvidia-cuda")
-    set(target_feature "feature=+ptx63")
+    set(target_feature "feature=+ptx61")
   endif()
 
   # Package the bitcode in the bitcode and embed it in an ELF for the static library

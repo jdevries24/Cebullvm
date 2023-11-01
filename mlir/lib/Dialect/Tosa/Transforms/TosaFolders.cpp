@@ -350,11 +350,6 @@ llvm::APInt calculateReducedValue(const mlir::ElementsAttr &oldTensorAttr,
 template <typename OperationType>
 struct ReduceConstantOptimization : public OpRewritePattern<OperationType> {
 
-  ReduceConstantOptimization(MLIRContext *context,
-                             bool aggressiveReduceConstant)
-      : OpRewritePattern<OperationType>(context),
-        aggressiveReduceConstant(aggressiveReduceConstant) {}
-
   using OpRewritePattern<OperationType>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(OperationType op,
@@ -366,7 +361,7 @@ struct ReduceConstantOptimization : public OpRewritePattern<OperationType> {
       return rewriter.notifyMatchFailure(
           op, "reduce input must be const operation");
 
-    if (!inputOp.hasOneUse() && !this->aggressiveReduceConstant)
+    if (!inputOp.hasOneUse())
       return rewriter.notifyMatchFailure(
           op, "input operation has more than one user");
 
@@ -405,26 +400,18 @@ struct ReduceConstantOptimization : public OpRewritePattern<OperationType> {
     rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, rankedTensorType, denseAttr);
     return success();
   }
-  const bool aggressiveReduceConstant;
 };
 
 } // namespace
 
 void mlir::tosa::populateTosaConstantReduction(MLIRContext *ctx,
-                                               RewritePatternSet &patterns,
-                                               bool aggressiveReduceConstant) {
-  patterns.add<ReduceConstantOptimization<ReduceAllOp>>(
-      ctx, aggressiveReduceConstant);
-  patterns.add<ReduceConstantOptimization<ReduceAnyOp>>(
-      ctx, aggressiveReduceConstant);
-  patterns.add<ReduceConstantOptimization<ReduceMaxOp>>(
-      ctx, aggressiveReduceConstant);
-  patterns.add<ReduceConstantOptimization<ReduceMinOp>>(
-      ctx, aggressiveReduceConstant);
-  patterns.add<ReduceConstantOptimization<ReduceProdOp>>(
-      ctx, aggressiveReduceConstant);
-  patterns.add<ReduceConstantOptimization<ReduceSumOp>>(
-      ctx, aggressiveReduceConstant);
+                                               RewritePatternSet &patterns) {
+  patterns.add<ReduceConstantOptimization<ReduceAllOp>>(ctx);
+  patterns.add<ReduceConstantOptimization<ReduceAnyOp>>(ctx);
+  patterns.add<ReduceConstantOptimization<ReduceMaxOp>>(ctx);
+  patterns.add<ReduceConstantOptimization<ReduceMinOp>>(ctx);
+  patterns.add<ReduceConstantOptimization<ReduceProdOp>>(ctx);
+  patterns.add<ReduceConstantOptimization<ReduceSumOp>>(ctx);
 }
 
 void mlir::tosa::populateTosaFoldConstantTransposePatterns(

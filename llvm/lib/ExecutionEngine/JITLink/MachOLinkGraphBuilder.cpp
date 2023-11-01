@@ -108,8 +108,7 @@ MachOLinkGraphBuilder::getPointerSize(const object::MachOObjectFile &Obj) {
 
 llvm::endianness
 MachOLinkGraphBuilder::getEndianness(const object::MachOObjectFile &Obj) {
-  return Obj.isLittleEndian() ? llvm::endianness::little
-                              : llvm::endianness::big;
+  return Obj.isLittleEndian() ? support::little : support::big;
 }
 
 Section &MachOLinkGraphBuilder::getCommonSection() {

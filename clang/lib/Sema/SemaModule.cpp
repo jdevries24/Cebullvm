@@ -28,11 +28,11 @@ static void checkModuleImportContext(Sema &S, Module *M,
 
   if (auto *LSD = dyn_cast<LinkageSpecDecl>(DC)) {
     switch (LSD->getLanguage()) {
-    case LinkageSpecLanguageIDs::C:
+    case LinkageSpecDecl::lang_c:
       if (ExternCLoc.isInvalid())
         ExternCLoc = LSD->getBeginLoc();
       break;
-    case LinkageSpecLanguageIDs::CXX:
+    case LinkageSpecDecl::lang_cxx:
       break;
     }
     DC = LSD->getParent();

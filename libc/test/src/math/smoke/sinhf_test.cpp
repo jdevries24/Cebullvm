@@ -17,9 +17,11 @@
 #include <errno.h>
 #include <stdint.h>
 
-using LlvmLibcSinhfTest = LIBC_NAMESPACE::testing::FPTest<float>;
+using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
 
-TEST_F(LlvmLibcSinhfTest, SpecialNumbers) {
+DECLARE_SPECIAL_CONSTANTS(float)
+
+TEST(LlvmLibcSinhfTest, SpecialNumbers) {
   libc_errno = 0;
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinhf(aNaN));
@@ -39,7 +41,7 @@ TEST_F(LlvmLibcSinhfTest, SpecialNumbers) {
 }
 
 // For small values, sinh(x) is x.
-TEST_F(LlvmLibcSinhfTest, SmallValues) {
+TEST(LlvmLibcSinhfTest, SmallValues) {
   float x = float(FPBits(uint32_t(0x17800000)));
   float result = LIBC_NAMESPACE::sinhf(x);
   EXPECT_FP_EQ(x, result);
@@ -49,7 +51,7 @@ TEST_F(LlvmLibcSinhfTest, SmallValues) {
   EXPECT_FP_EQ(x, result);
 }
 
-TEST_F(LlvmLibcSinhfTest, Overflow) {
+TEST(LlvmLibcSinhfTest, Overflow) {
   libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       inf, LIBC_NAMESPACE::sinhf(float(FPBits(0x7f7fffffU))), FE_OVERFLOW);

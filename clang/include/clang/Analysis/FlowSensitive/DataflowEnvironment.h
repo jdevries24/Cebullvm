@@ -260,7 +260,11 @@ public:
   /// if `D` isn't assigned a storage location in the environment.
   StorageLocation *getStorageLocation(const ValueDecl &D) const;
 
-  /// Removes the location assigned to `D` in the environment (if any).
+  /// Removes the location assigned to `D` in the environment.
+  ///
+  /// Requirements:
+  ///
+  ///  `D` must have a storage location assigned in the environment.
   void removeDecl(const ValueDecl &D);
 
   /// Assigns `Loc` as the storage location of the glvalue `E` in the
@@ -469,8 +473,9 @@ public:
 
   /// Returns a symbolic boolean value that models a boolean literal equal to
   /// `Value`
-  BoolValue &getBoolLiteralValue(bool Value) const {
-    return arena().makeBoolValue(arena().makeLiteral(Value));
+  AtomicBoolValue &getBoolLiteralValue(bool Value) const {
+    return cast<AtomicBoolValue>(
+        arena().makeBoolValue(arena().makeLiteral(Value)));
   }
 
   /// Returns an atomic boolean value.
@@ -542,29 +547,12 @@ public:
   Atom getFlowConditionToken() const { return FlowConditionToken; }
 
   /// Record a fact that must be true if this point in the program is reached.
-  void assume(const Formula &);
-
-  /// Deprecated synonym for `assume()`.
-  void addToFlowCondition(const Formula &F) { assume(F); }
+  void addToFlowCondition(const Formula &);
 
   /// Returns true if the formula is always true when this point is reached.
-  /// Returns false if the formula may be false (or the flow condition isn't
-  /// sufficiently precise to prove that it is true) or if the solver times out.
-  ///
-  /// Note that there is an asymmetry between this function and `allows()` in
-  /// that they both return false if the solver times out. The assumption is
-  /// that if `proves()` or `allows()` returns true, this will result in a
-  /// diagnostic, and we want to bias towards false negatives in the case where
-  /// the solver times out.
-  bool proves(const Formula &) const;
-
-  /// Returns true if the formula may be true when this point is reached.
-  /// Returns false if the formula is always false when this point is reached
-  /// (or the flow condition is overly constraining) or if the solver times out.
-  bool allows(const Formula &) const;
-
-  /// Deprecated synonym for `proves()`.
-  bool flowConditionImplies(const Formula &F) const { return proves(F); }
+  /// Returns false if the formula may be false, or if the flow condition isn't
+  /// sufficiently precise to prove that it is true.
+  bool flowConditionImplies(const Formula &) const;
 
   /// Returns the `DeclContext` of the block being analysed, if any. Otherwise,
   /// returns null.

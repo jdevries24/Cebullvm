@@ -422,20 +422,10 @@ void LoopEmitter::initializeLoopEmit(
     // FIXME: the definition of `lvlRank` looks more like a dim-rank;
     // but the variable is used as a level everywhere below, which
     // suggests there may be some dim/lvl confusion going on here.
-    auto stt = getSparseTensorType(tensor);
-    const Level lvlRank = stt.getLvlRank();
+    const Level lvlRank = rtp.getRank();
     const auto shape = rtp.getShape();
     const auto enc = getSparseTensorEncoding(rtp);
     const Level cooStart = enc ? getCOOStart(enc) : lvlRank;
-
-    SmallVector<Value> lvlSzs;
-    for (Level l = 0; l < stt.getLvlRank(); l++) {
-      if (stt.hasEncoding())
-        lvlSzs.push_back(builder.create<LvlOp>(loc, tensor, l));
-      else
-        lvlSzs.push_back(builder.create<tensor::DimOp>(loc, tensor, l));
-    }
-
     // Scan all levels of current tensor.
     for (Level l = 0; l < lvlRank; l++) {
       // This should be called only once at beginning.
@@ -457,8 +447,13 @@ void LoopEmitter::initializeLoopEmit(
         assert(isDenseDLT(lvlTp));
       }
 
+      // FIXME: `toOrigDim` is deprecated.  For now this relies on the
+      // 1:1 mapping between levels and dimensions, since nowhere else
+      // in the code supports non-permutations yet either.
+      Value lvlSz = mlir::linalg::createOrFoldDimOp(builder, loc, tensor,
+                                                    toOrigDim(enc, l));
       // Find upper bound in current dimension.
-      highs[t][l] = lvlSizes[t][l] = lvlSzs[l];
+      highs[t][l] = lvlSizes[t][l] = lvlSz;
       if (isSparseSlices[t]) {
         sliceOffsets[t][l] = genSliceOffset(builder, loc, tensors[t], l);
         sliceStrides[t][l] = genSliceStride(builder, loc, tensors[t], l);
@@ -490,8 +485,7 @@ void LoopEmitter::initializeLoopEmit(
       valBuffer[t] = denseVal;
     } else {
       // Annotated sparse tensors.
-      // We also need the value buffer for all-dense annotated "sparse"
-      // tensors.
+      // We also need the value buffer for all-dense annotated "sparse" tensors.
       valBuffer[t] = genToValues(builder, loc, tensor);
     }
     // NOTE: we can also prepare for 0 lvl here in advance, this will hoist

@@ -333,7 +333,8 @@ public:
   void addAllArgs(ArgStringList &Output, ArrayRef<OptSpecifier> Ids) const;
 
   /// AddAllArgs - Render all arguments matching the given ids.
-  void AddAllArgs(ArgStringList &Output, OptSpecifier Id0) const;
+  void AddAllArgs(ArgStringList &Output, OptSpecifier Id0,
+                  OptSpecifier Id1 = 0U, OptSpecifier Id2 = 0U) const;
 
   /// AddAllArgValues - Render the argument values of all arguments
   /// matching the given ids.
