@@ -243,7 +243,23 @@ def MOV:Instruction{
     let Inst{3-0} = src;
 }
 
-def LEA:LongINS<0x74,(outs GPReg:$dest),(ins i32imm:$loc),"LEA $dest,$loc",[(set i32:$dest ,(load_sym tglobaladdr:$loc))]>;
+//def LEA:LongINS<0x74,(outs GPReg:$dest),(ins i32imm:$loc),"LEA $dest,$loc",[(set i32:$dest ,(load_sym tglobaladdr:$loc))]>;
+def LEA:Instruction{
+    let Namespace = "JRISCdev";
+    let Size = 4;
+    let InOperandList = (ins JRISCimm24S:$loc);
+    let OutOperandList = (outs GPReg:$dest);
+    let AsmString = "LEA $dest,$loc";
+    let Pattern = [(set i32:$dest ,(load_sym tglobaladdr:$loc))];
+    bits<32> Inst;
+    bits<20> loc;
+    bits<4> dest;
+    let Inst{31-24} = 0x74;
+    let Inst{23-20} = dest;
+    let Inst{19-0} = loc;
+    let isCall = 1;
+}
+
 //def CAL:LongINS<0x0A,(outs),(ins JRISCimm24S:$loc),"CAL $loc",[(JRISC_call (load_sym tglobaladdr:$loc))]>{let isCall=1;}
 def CAL:Instruction{
     let Namespace = "JRISCdev";
@@ -259,7 +275,22 @@ def CAL:Instruction{
     let isCall = 1;
 }
 
-def CAR:LongINS<0x0A,(outs),(ins GPReg:$loc),"CAR $loc",[(JRISC_call i32:$loc)]>{let isCall=1;}
+//def CAR:LongINS<0x0A,(outs),(ins GPReg:$loc),"CAR $loc",[(JRISC_call i32:$loc)]>{let isCall=1;}
+
+def CAR:Instruction{
+    let Namespace = "JRISCdev";
+    let Size = 4;
+    let InOperandList = (ins GPReg:$loc);
+    let OutOperandList = (outs);
+    let AsmString = "CAR $loc";
+    let Pattern = [(JRISC_call i32:$loc)];
+    bits<16> Inst;
+    bits<4> loc;
+    let Inst{15-8} = 0xA0;
+    let Inst{8-4} = 0;
+    let Inst{3-0} = loc;
+    let isCall = 1;
+}
 
 
 

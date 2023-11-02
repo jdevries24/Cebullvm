@@ -28,12 +28,12 @@ def JRISCimm16S : Operand<i32>,ImmLeaf<i32,[{
     return (Imm > -32767) & (Imm < 32767);
 }]>;
 
-def JRISCimm24U : Operand<i32>,ImmLeaf<i32,[{
-    return (Imm >= 0) & (Imm < 1048576);
+def JRISCimm24S : Operand<i32>,ImmLeaf<i32,[{
+    return (Imm > -8388605 ) & (Imm < 8388608);
 }]>;
 
-def JRISCimm24S : Operand<i32>,ImmLeaf<i32,[{
-    return (Imm > -524228 ) & (Imm < 524228);
+def JRISCimm20S : Operand<i32>,ImmLeaf<i32,[{
+    return (Imm > -524285) & (Imm < 52485);
 }]>;
 
 def load_sym : SDNode<"JRISCdevID::LOAD_SYM",SDTIntUnaryOp>;
