@@ -25,4 +25,5 @@ def SystemRegs :RegisterClass<"JRISCdev",[i32],32,(add SP,RA)>;
 
 def GPReg : RegisterOperand<GPregs>{
     let GIZeroRegister = R0;
+    let EncoderMethod = "encodeRegister";
 }

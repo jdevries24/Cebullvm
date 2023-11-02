@@ -260,7 +260,7 @@ def LEA:Instruction{
     let isCall = 1;
 }
 
-//def CAL:LongINS<0x0A,(outs),(ins JRISCimm24S:$loc),"CAL $loc",[(JRISC_call (load_sym tglobaladdr:$loc))]>{let isCall=1;}
+
 def CAL:Instruction{
     let Namespace = "JRISCdev";
     let Size = 4;
