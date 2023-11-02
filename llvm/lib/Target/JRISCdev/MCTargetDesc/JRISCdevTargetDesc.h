@@ -33,8 +33,11 @@ MCAsmBackend *createJRISCdevAsmBackend(const Target &T,
 MCTargetStreamer *
 JRISCdevObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
 
+//MCCodeEmitter *createJRISCdevCodeEmitter(MCInstrInfo &l,MCContext &c);
 
 }
+
+
 
 #define GET_REGINFO_ENUM
 #include "JRISCdevGenRegisterInfo.inc"
