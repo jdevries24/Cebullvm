@@ -499,6 +499,9 @@ std::unique_ptr<TargetCodeGenInfo>
 createRISCVTargetCodeGenInfo(CodeGenModule &CGM, unsigned XLen, unsigned FLen);
 
 std::unique_ptr<TargetCodeGenInfo>
+createJRISCdevTargetCodeGenInfo(CodeGenModule &CGM);
+
+std::unique_ptr<TargetCodeGenInfo>
 createCommonSPIRTargetCodeGenInfo(CodeGenModule &CGM);
 
 std::unique_ptr<TargetCodeGenInfo>

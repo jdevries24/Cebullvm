@@ -110,6 +110,9 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
   switch (Triple.getArch()) {
   default:
     return createDefaultTargetCodeGenInfo(CGM);
+  
+  case llvm::Triple::JRISCdev:
+    return createJRISCdevTargetCodeGenInfo(CGM);
 
   case llvm::Triple::le32:
     return createPNaClTargetCodeGenInfo(CGM);
