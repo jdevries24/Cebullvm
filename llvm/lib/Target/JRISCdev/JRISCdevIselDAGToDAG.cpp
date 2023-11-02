@@ -62,13 +62,7 @@ bool JRISCdevDAGToDAGISel::SelectAddr(SDValue Addr,SDValue &Base,SDValue &Offset
 
 void JRISCdevDAGToDAGISel::SelectLargeConst(ConstantSDNode *node){
   int64_t cvalue = node->getSExtValue();
-  if((cvalue > -0x100000) && (cvalue < 0x100000)){
-    SDLoc dl(node);
-    CurDAG->SelectNodeTo(node,JRISCdev::MOVSI,MVT::i32,CurDAG->getTargetConstant(cvalue & 0xffffff,dl,MVT::i32));
-  }
-  else{
-    llvm_unreachable("Very large SD not imp");
-  }
+  llvm_unreachable("Very large SD not imp");
 }
 
 void JRISCdevDAGToDAGISel::SelectConst(SDNode *node){
