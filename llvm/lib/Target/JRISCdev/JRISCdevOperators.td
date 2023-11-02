@@ -5,6 +5,7 @@ def memsrc : Operand<i32>{
 }
 
 def jmptarget : Operand<OtherVT>;
+def branchtarget: Operand<OtherVT>;
 
 def addr : ComplexPattern<i32,2,"SelectAddr",[],[]>;
 

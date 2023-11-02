@@ -8,7 +8,7 @@ class ShortINS<bits<8> opcode,dag outs,dag ins,string asmstr,list<dag> pattern>:
     let AsmString = asmstr;
     let Size = 2;
     let Pattern = pattern;
-    bits<16> Inst;
+    bits<16>Inst;
     let Inst{15-8} = opcode;
 }
 
@@ -19,40 +19,120 @@ class LongINS<bits<8> opcode,dag outs,dag ins,string asmstr,list<dag> pattern>:I
     let AsmString = asmstr;
     let Size = 4;
     let Pattern = pattern;
-    bits<32> Inst;
+    bits<32>Inst;
     let Inst{31-24} = opcode;
 }
 
 class MathR <bits<8> opcode,string mem,SDNode opnode>:Instruction{
     let Namespace = "JRISCdev";
+    let Size = 2;
     let OutOperandList = (outs GPReg:$dest);
     let InOperandList = (ins GPReg:$src1,GPReg:$src2);
+    bits<4> src1;bits<4> src2;
     let AsmString = !strconcat(mem , " $src1,$src2");
     let Pattern = [(set i32:$dest , (opnode i32:$src1 , i32:$src2))];
     let Constraints = "$dest = $src1";
     let Size = 2;
     bits<16> Inst;
     let Inst{15-8} = opcode;
+    let Inst{7-4} = src1;
+    let Inst{3-0} = src2;
 }
 
-class MathI <bits<8> opcode,string mem,SDNode opnode>:LongINS<opcode,(outs GPReg:$dest),(ins GPReg:$src,MathIM:$im),!strconcat(mem, " $dest,$src,$im"),[(set i32:$dest , (opnode i32:$src , JRISCimm16U:$im ))]>;
+class LDR<bits<8> opcode,string mem,list<dag> pat>:Instruction{
+    let Namespace = "JRISCdev";
+    let Size = 2;
+    let OutOperandList = (outs GPReg:$dest);
+    let InOperandList = (ins GPReg:$src);
+    let Pattern = pat;
+    let AsmString = !strconcat(mem , " $dest,$src");
+    bits<16> Inst;
+    bits<4> dest;bits<4> src;
+    let Inst{15-8} = opcode;
+    let Inst{7-4} = dest;
+    let Inst{3-0} = src;
+    let mayLoad = true;
+}
 
+class LOADI<bits<8> opcode,string mem,list<dag> pat>:Instruction{
+    let Namespace = "JRISCdev";
+    let Size = 4;
+    let OutOperandList = (outs GPReg:$dest);
+    let InOperandList = (ins memsrc:$src);
+    let Pattern = pat;
+    let AsmString = !strconcat(mem , " $dest,$src");
+    bits<32> Inst;
+    bits<4> dest;bits<20> src;
+    let Inst{31-24} = opcode;
+    let Inst{23-20} = dest;
+    let Inst{19-0} = src;
+    let mayLoad = true;
+}
+
+class STRR<bits<8> opcode,string mem,list<dag> pat>:Instruction{
+    let Namespace = "JRISCdev";
+    let Size = 2;
+    let OutOperandList = (outs);
+    let InOperandList = (ins GPReg:$src,GPReg:$dest);
+    let Pattern = pat;
+    let AsmString = !strconcat(mem , " $src,$dest");
+    bits<16> Inst;
+    bits<4> dest;bits<4> src;
+    let Inst{15-8} = opcode;
+    let Inst{7-4} = src;
+    let Inst{3-0} = dest;
+    let mayStore = true;
+}
+
+class STRI<bits<8> opcode,string mem,list<dag> pat>:Instruction{
+    let Namespace = "JRISCdev";
+    let Size = 2;
+    let OutOperandList = (outs);
+    let InOperandList = (ins GPReg:$src,memsrc:$dest);
+    let Pattern = pat;
+    let AsmString = !strconcat(mem , " $src,$dest");
+    bits<32> Inst;
+    bits<20> dest;bits<4> src;
+    let Inst{31-24} = opcode;
+    let Inst{23-20} = src;
+    let Inst{19-0} = dest;
+    let mayStore = true;
+}
+
+class MathI <bits<8> opcode,string mem,SDNode opnode,Operand Optype = JRISCimm16U>:Instruction{
+    let Namespace = "JRISCdev";
+    let OutOperandList = (outs GPReg:$dest);
+    let InOperandList = (ins GPReg:$src,MathIM:$im);
+    let AsmString = !strconcat(mem, " $dest,$src,$im");
+    let Pattern = [(set i32:$dest , (opnode i32:$src , Optype:$im ))];
+    let Size = 4;
+    bits<32> Inst;
+    bits<4> src;bits<4> dest;bits<16>im;
+    let Inst{31-24} = opcode;
+    let Inst{23-20} = dest;
+    let Inst{19-16} = src;
+    let Inst{15-0} = im;
+}
 
 class JRISC_br<bits<8> opcode,string mem,CondCode cc>:Instruction{
     let Namespace = "JRISCdev";
     let OutOperandList = (outs);
-    let InOperandList = (ins GPReg:$s1,GPReg:$s2,jmptarget:$dest);
+    let InOperandList = (ins GPReg:$s1,GPReg:$s2,branchtarget:$dest);
     let AsmString = !strconcat(mem , " $s1,$s2,$dest");
     let Pattern = [(brcc cc,i32:$s1,i32:$s2,bb:$dest)];
-    let Size = 2;
+    let Size = 4;
     bits<32> Inst;
+    bits<4> s1;bits<4> s2;bits<16>dest;
     let Inst{31-24} = opcode;
+    let Inst{23-20} = s1;
+    let Inst{19-16} = s2;
+    let Inst{15-0} = dest;
     
 }
 
 
 def ADDI:MathI<0x40,"ADDI",add>;
-def SUBI:LongINS<0x41,(outs GPReg:$dest),(ins GPReg:$src,MathIM:$im),"SUBI $dest,$src,$im",[(set i32:$dest , (add i32:$src , JRISCimm16N:$im))]>;
+def SUBI:MathI<0x42,"SUBI",add,JRISCimm16N>;
 def ANDI:MathI<0x42,"ANDI",and>;
 def ORRI:MathI<0x43,"ORRI",or>;
 def XORI:MathI<0x44,"XORI",xor>;
@@ -82,25 +162,12 @@ def SMOD:MathR<0x3C,"SMOD",srem>;
 def DIV:MathR<0x3D,"DIV",udiv>;
 def SDIV:MathR<0x3F,"SDIV",sdiv>;
 
-
-
-
-class LOADR<bits<8> opcode,string mem,list<dag> pat>:ShortINS<opcode,(outs GPReg:$dest),(ins GPReg:$src),!strconcat(mem , " $dest,$src"),pat>{
-    let mayLoad = true;
-}
-
-def LDB:LOADR<0x10,"LDB",[(set i32:$dest , (zextloadi8 i32:$src))]>;
-def LDBS:LOADR<0x14,"LDBS",[(set i32:$dest , (sextloadi8 i32:$src))]>;
-def LDH:LOADR<0x11,"LDH",[(set i32:$dest , (zextloadi16 i32:$src))]>;
-def LDHS:LOADR<0x15,"LDHS",[(set i32:$dest , (sextloadi16 i32:$src))]>;
-def LDW:LOADR<0x10,"LDW",[(set i32:$dest , (load i32:$src))]>;
-def LDWS:LOADR<0x10,"LDWS",[(set i32:$dest , (extload i32:$src))]>;
-
-
-
-class LOADI<bits<8> opcode,string mem,list<dag> pat>:LongINS<opcode,(outs GPReg:$dest),(ins memsrc:$src),!strconcat(mem , " $dest,$src"),pat>{
-    let mayLoad = true;
-}
+def LDB:LDR<0x10,"LDB",[(set i32:$dest , (zextloadi8 i32:$src))]>;
+def LDBS:LDR<0x14,"LDBS",[(set i32:$dest , (sextloadi8 i32:$src))]>;
+def LDH:LDR<0x11,"LDH",[(set i32:$dest , (zextloadi16 i32:$src))]>;
+def LDHS:LDR<0x15,"LDHS",[(set i32:$dest , (sextloadi16 i32:$src))]>;
+def LDW:LDR<0x10,"LDW",[(set i32:$dest , (load i32:$src))]>;
+def LDWS:LDR<0x10,"LDWS",[(set i32:$dest , (extload i32:$src))]>;
 
 def LDBI:LOADI<0x10,"LDBI",[(set i32:$dest , (zextloadi8 addr:$src))]>;
 def LDBSI:LOADI<0x10,"LDBSI",[(set i32:$dest , (sextloadi8 addr:$src))]>;
@@ -109,17 +176,10 @@ def LDHSI:LOADI<0x10,"LDHSI",[(set i32:$dest , (sextloadi16 addr:$src))]>;
 def LDWI:LOADI<0x10,"LDWI",[(set i32:$dest , (load addr:$src))]>;
 def LDWSI:LOADI<0x10,"LDWSI",[(set i32:$dest , (extload addr:$src))]>;
 
-class STRR<bits<8> opcode,string mem,list<dag> pat>:ShortINS<opcode,(outs),(ins GPReg:$src , GPReg:$dest),!strconcat(mem , " $src,$dest"),pat>{
-    let mayStore = true;
-}
 
 def STB:STRR<0x18,"STB",[(truncstorevi8 i32:$src , i32:$dest)]>;
 def STH:STRR<0x19,"STH",[(truncstorevi16 i32:$src , i32:$dest)]>;
 def STW:STRR<0x1A,"STW",[(store i32:$src , i32:$dest)]>;
-
-class STRI<bits<8> opcode,string mem,list<dag> pat>:LongINS<opcode,(outs),(ins GPReg:$src , memsrc:$dest),!strconcat(mem , " $src,$dest"),pat>{
-    let mayStore = true;
-}
 
 def STBI:STRI<0x28,"STBI",[(truncstorevi8 i32:$src , addr:$dest)]>;
 def STHI:STRI<0x29,"STHI",[(truncstorevi16 i32:$src , addr:$dest)]>;
@@ -137,26 +197,72 @@ def JSLT:JRISC_br<0x63,"JSLT",SETLT>;
 def JSGT:JRISC_br<0x64,"JSGT",SETGT>;
 }
 
-def JMP:LongINS<0x50,(outs),(ins jmptarget:$loc),"JMP $loc",[(br bb:$loc)]>{
-    let isBarrier = 1;
-    let isTerminator = 1;
-    let isBranch = 1;
-    }
 
 
-def RET:ShortINS<0xB0,(outs),(ins),"RET",[(JRISCdevRetFlag)]>{
+def JMP:Instruction{
+    let Namespace = "JRISCdev";
+    let Size = 4;
+    let InOperandList = (ins jmptarget:$loc);
+    let OutOperandList = (outs);
+    let AsmString = "JMP $loc";
+    let Pattern = [(br bb:$loc)];
+    bits<32> Inst;
+    let Inst{31-24} = 0x50;
+    bits<24> loc;
+    let Inst{23-0} = loc;
+    let isBranch = true;
+    let isTerminator = true;
+    let isBarrier = true;
+}
+
+
+def RET:Instruction{
+    let Namespace = "JRISCdev";
+    let Size = 2;
+    let InOperandList = (ins);
+    let OutOperandList = (outs);
+    let AsmString = "RET";
+    let Pattern = [(JRISCdevRetFlag)];
+    bits<16> Inst = 0xB000;
     let isReturn = true;
     let isTerminator = true;
     let isBarrier = true;
 }
 
-def MOV:ShortINS<0x70,(outs GPReg:$dest),(ins GPReg:$src),"MOV $dest,$src",[]>{let isMoveReg = 1;}
-def MOVI:LongINS<0x71,(outs GPReg:$dest),(ins i32imm:$im),"MOVI $dest,$im",[]>;
-def MOVSI:LongINS<0x73,(outs GPReg:$dest),(ins i32imm:$im),"MOVSI $dest,$im",[]>;
-def MOVUI:LongINS<0x72,(outs GPReg:$dest),(ins i32imm:$im),"MOVUI $dest,$im",[]>;
+def MOV:Instruction{
+    let Namespace = "JRISCdev";
+    let Size = 2;
+    let InOperandList = (ins GPReg:$src);
+    let OutOperandList = (outs GPReg:$dest);
+    let AsmString = "MOV $dest,$src";
+    let Pattern = [];
+    bits<16> Inst;
+    bits<4> dest;bits<4> src;
+    let Inst{15-8} = 0x4f;
+    let Inst{7-4} = dest;
+    let Inst{3-0} = src;
+}
+
 def LEA:LongINS<0x74,(outs GPReg:$dest),(ins i32imm:$loc),"LEA $dest,$loc",[(set i32:$dest ,(load_sym tglobaladdr:$loc))]>;
-def CAL:LongINS<0x0A,(outs),(ins i32imm:$loc),"CAL $loc",[(JRISC_call (load_sym tglobaladdr:$loc))]>{let isCall=1;}
+//def CAL:LongINS<0x0A,(outs),(ins JRISCimm24S:$loc),"CAL $loc",[(JRISC_call (load_sym tglobaladdr:$loc))]>{let isCall=1;}
+def CAL:Instruction{
+    let Namespace = "JRISCdev";
+    let Size = 4;
+    let InOperandList = (ins JRISCimm24S:$loc);
+    let OutOperandList = (outs);
+    let AsmString = "CAL $loc";
+    let Pattern = [(JRISC_call (load_sym tglobaladdr:$loc))];
+    bits<32> Inst;
+    bits<24> loc;
+    let Inst{31-24} = 0xA0;
+    let Inst{23-0} = loc;
+    let isCall = 1;
+}
+
 def CAR:LongINS<0x0A,(outs),(ins GPReg:$loc),"CAR $loc",[(JRISC_call i32:$loc)]>{let isCall=1;}
+
+
+
 
 class SEL_PAT<CondCode cc,string CondStr>:Instruction{
     let Namespace = "JRISCdev";
