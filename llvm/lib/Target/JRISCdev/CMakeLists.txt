@@ -6,6 +6,7 @@ tablegen(LLVM JRISCGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM JRISCdevGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM JRISCdevGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM JRISCdevGenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM JRISCdevGenEmitter.inc -gen-emitter)
 
 add_public_tablegen_target(JRISCdevCommonTableGen)
 
