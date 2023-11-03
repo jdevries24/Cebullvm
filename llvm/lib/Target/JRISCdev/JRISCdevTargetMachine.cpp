@@ -36,6 +36,7 @@ JRISCdevTargetMachine::JRISCdevTargetMachine(const Target &T, const Triple &TT,
                                        CodeGenOptLevel OL, bool JIT):LLVMTargetMachine(T,"E-p:32:32-i32:32-i16:16-i8:8-i1:8",TT,CPU,FS,Options,Reloc::PIC_,getCM(CM),OL),
                                        subtarget(TT,CPU.str(),FS.str(),*this),TLOF(std::make_unique<TargetLoweringObjectFileELF>()){
                                         initAsmInfo();
+                                        TargetTriple.setObjectFormat(Triple::ELF);
                      }
 
 bool JRISCdevTargetMachine::addPassesToEmitFile(
@@ -53,8 +54,14 @@ bool JRISCdevTargetMachine::addPassesToEmitFile(
   PC->addMachinePasses();
   PC->setInitialized();
   if (TargetPassConfig::willCompleteCodeGenPipeline()) {
-    if (addCodeFileOut(PM, Out, DwoOut, FileType, MMIWP->getMMI().getContext()))
-      return true;
+    if(FileType == CodeGenFileType::AssemblyFile){
+      if (addCodeFileOut(PM, Out, DwoOut, FileType, MMIWP->getMMI().getContext()))
+        return true;
+    }
+    else{
+      if(addAsmPrinter(PM,Out,DwoOut,FileType,MMIWP->getMMI().getContext()))
+        return true;
+    }
   } else {
     // MIR printing is redundant with -filetype=null.
     if (FileType != CodeGenFileType::Null)
