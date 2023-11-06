@@ -166,15 +166,15 @@ def LDB:LDR<0x10,"LDB",[(set i32:$dest , (zextloadi8 i32:$src))]>;
 def LDBS:LDR<0x14,"LDBS",[(set i32:$dest , (sextloadi8 i32:$src))]>;
 def LDH:LDR<0x11,"LDH",[(set i32:$dest , (zextloadi16 i32:$src))]>;
 def LDHS:LDR<0x15,"LDHS",[(set i32:$dest , (sextloadi16 i32:$src))]>;
-def LDW:LDR<0x10,"LDW",[(set i32:$dest , (load i32:$src))]>;
-def LDWS:LDR<0x10,"LDWS",[(set i32:$dest , (extload i32:$src))]>;
+def LDW:LDR<0x12,"LDW",[(set i32:$dest , (load i32:$src))]>;
+def LDWS:LDR<0x16,"LDWS",[(set i32:$dest , (extload i32:$src))]>;
 
-def LDBI:LOADI<0x10,"LDBI",[(set i32:$dest , (zextloadi8 addr:$src))]>;
-def LDBSI:LOADI<0x10,"LDBSI",[(set i32:$dest , (sextloadi8 addr:$src))]>;
-def LDHI:LOADI<0x10,"LDHI",[(set i32:$dest , (zextloadi16 addr:$src))]>;
-def LDHSI:LOADI<0x10,"LDHSI",[(set i32:$dest , (sextloadi16 addr:$src))]>;
-def LDWI:LOADI<0x10,"LDWI",[(set i32:$dest , (load addr:$src))]>;
-def LDWSI:LOADI<0x10,"LDWSI",[(set i32:$dest , (extload addr:$src))]>;
+def LDBI:LOADI<0x20,"LDBI",[(set i32:$dest , (zextloadi8 addr:$src))]>;
+def LDBSI:LOADI<0x24,"LDBSI",[(set i32:$dest , (sextloadi8 addr:$src))]>;
+def LDHI:LOADI<0x21,"LDHI",[(set i32:$dest , (zextloadi16 addr:$src))]>;
+def LDHSI:LOADI<0x25,"LDHSI",[(set i32:$dest , (sextloadi16 addr:$src))]>;
+def LDWI:LOADI<0x22,"LDWI",[(set i32:$dest , (load addr:$src))]>;
+def LDWSI:LOADI<0x26,"LDWSI",[(set i32:$dest , (extload addr:$src))]>;
 
 
 def STB:STRR<0x18,"STB",[(truncstorevi8 i32:$src , i32:$dest)]>;
