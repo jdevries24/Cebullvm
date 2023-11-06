@@ -247,7 +247,7 @@ def MOV:Instruction{
 def LEA:Instruction{
     let Namespace = "JRISCdev";
     let Size = 4;
-    let InOperandList = (ins JRISCimm24S:$loc);
+    let InOperandList = (ins JRISCimm20S:$loc);
     let OutOperandList = (outs GPReg:$dest);
     let AsmString = "LEA $dest,$loc";
     let Pattern = [(set i32:$dest ,(load_sym tglobaladdr:$loc))];
