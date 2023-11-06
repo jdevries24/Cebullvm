@@ -86,13 +86,13 @@ class STRR<bits<8> opcode,string mem,list<dag> pat>:Instruction{
 
 class STRI<bits<8> opcode,string mem,list<dag> pat>:Instruction{
     let Namespace = "JRISCdev";
-    let Size = 2;
+    let Size = 4;
     let OutOperandList = (outs);
     let InOperandList = (ins GPReg:$src,memsrc:$dest);
     let Pattern = pat;
     let AsmString = !strconcat(mem , " $src,$dest");
     bits<32> Inst;
-    bits<20> dest;bits<4> src;
+    bits<4> src;bits<20> dest;
     let Inst{31-24} = opcode;
     let Inst{23-20} = src;
     let Inst{19-0} = dest;
@@ -132,7 +132,7 @@ class JRISC_br<bits<8> opcode,string mem,CondCode cc>:Instruction{
 
 
 def ADDI:MathI<0x40,"ADDI",add>;
-def SUBI:MathI<0x42,"SUBI",add,JRISCimm16N>;
+def SUBI:MathI<0x41,"SUBI",add,JRISCimm16N>;
 def ANDI:MathI<0x42,"ANDI",and>;
 def ORRI:MathI<0x43,"ORRI",or>;
 def XORI:MathI<0x44,"XORI",xor>;
@@ -229,19 +229,7 @@ def RET:Instruction{
     let isBarrier = true;
 }
 
-def MOV:Instruction{
-    let Namespace = "JRISCdev";
-    let Size = 2;
-    let InOperandList = (ins GPReg:$src);
-    let OutOperandList = (outs GPReg:$dest);
-    let AsmString = "MOV $dest,$src";
-    let Pattern = [];
-    bits<16> Inst;
-    bits<4> dest;bits<4> src;
-    let Inst{15-8} = 0x4f;
-    let Inst{7-4} = dest;
-    let Inst{3-0} = src;
-}
+
 
 //def LEA:LongINS<0x74,(outs GPReg:$dest),(ins i32imm:$loc),"LEA $dest,$loc",[(set i32:$dest ,(load_sym tglobaladdr:$loc))]>;
 def LEA:Instruction{
@@ -315,4 +303,18 @@ def SELECT_GT:SEL_PAT<SETUGT,"GT">;
 def SELECT_SGT:SEL_PAT<SETGT,"SGT">;
 def CALLSTACKDOWN : LongINS<0x00,(outs),(ins i32imm:$amt,i32imm:$amt2),"ERROR!",[(callseq_start timm:$amt,timm:$amt2)]>;
 def CALLSTACKUP:LongINS<0x00,(outs),(ins i32imm:$amt,i32imm:$amt2),"ERROR!",[(callseq_end timm:$amt,timm:$amt2)]>;
+}
+
+def MOV:Instruction{
+    let Namespace = "JRISCdev";
+    let Size = 2;
+    let InOperandList = (ins GPReg:$src);
+    let OutOperandList = (outs GPReg:$dest);
+    let AsmString = "MOV $dest,$src";
+    let Pattern = [];
+    bits<16> Inst;
+    bits<4> dest;bits<4> src;
+    let Inst{15-8} = 0x4f;
+    let Inst{7-4} = dest;
+    let Inst{3-0} = src;
 }
