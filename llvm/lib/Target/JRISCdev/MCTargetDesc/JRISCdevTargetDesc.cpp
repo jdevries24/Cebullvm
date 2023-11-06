@@ -72,11 +72,11 @@ MCCodeEmitter *createJRISCdevMCCodeEmitter(const MCInstrInfo &MCII,
 
 */
 
-MCAsmBackend *createJRISCdevMCAsmBackend(const Target &T,
+MCAsmBackend *createJRISCdevBackend(const Target &T,
                                              const MCSubtargetInfo &STI,
                                              const MCRegisterInfo &MRI,
                                              const MCTargetOptions &Options) {
-return nullptr;
+return createJRISCdevAsmBackend(T,STI,MRI,Options);
 }
 
 /*
@@ -102,6 +102,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeJRISCdevTargetMC() {
   TargetRegistry::RegisterMCSubtargetInfo(T, createJRISCdevMCSubtargetInfo);
   TargetRegistry::RegisterMCInstPrinter(T, createJRISCdevInstPrinter);
   TargetRegistry::RegisterMCCodeEmitter(T, CreateE);
-  //TargetRegistry::RegisterMCAsmBackend(T, createJRISCdevMCAsmBackend);
+  TargetRegistry::RegisterMCAsmBackend(T, createJRISCdevBackend);
   //lsTargetRegistry::RegisterObjectTargetStreamer(T, createJRISCdevObjectTargetStreamer);
 }
