@@ -82,7 +82,7 @@ namespace{
                                     Value *= -1;
                                     Value |= 0x800000;
                                 }
-                                uint64_t off = Fixup.getOffset();
+                                uint64_t off = Fixup.getOffset() + 1;
                                     Data[off + 0] = (uint8_t) (Value >> 16) & 0xff;
                                     Data[off + 1] = (uint8_t) (Value >> 8) & 0xff;
                                     Data[off + 2] = (uint8_t) Value & 0xff;
@@ -102,7 +102,7 @@ namespace{
                                         Value *= -1;
                                         Value |= 0x8000;
                                     }
-                                    uint64_t off = Fixup.getOffset();
+                                    uint64_t off = Fixup.getOffset() + 2;
                                     Data[off + 0] = (uint8_t) (V >> 8) & 0xff;
                                     Data[off + 1] = (uint8_t) V & 0xff;
                                 }

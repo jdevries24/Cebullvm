@@ -57,7 +57,7 @@ uint64_t JRISCdevMCCodeEmitter::encodeImm16S(const MCInst &MI,uint64_t index,Sma
         }
     }
     else if(Op.isExpr()){
-        Fixups.push_back(MCFixup::create(index,Op.getExpr(),MCFixupKind(JRISCdev::FK_PC_REL_16S)));
+        Fixups.push_back(MCFixup::create(0,Op.getExpr(),MCFixupKind(JRISCdev::FK_PC_REL_16S)));
         return 0;
     }
     else{
@@ -68,7 +68,7 @@ uint64_t JRISCdevMCCodeEmitter::encodeImm16S(const MCInst &MI,uint64_t index,Sma
 uint64_t JRISCdevMCCodeEmitter::encodeImm20S(const MCInst &MI,uint64_t index,SmallVectorImpl<MCFixup> &Fixups,const MCSubtargetInfo)const{
     const MCOperand &Op = MI.getOperand(index);
     assert(Op.isExpr() && "Imm20S should be a symbol");
-    Fixups.push_back(MCFixup::create(index,Op.getExpr(),MCFixupKind(JRISCdev::FK_PC_REL_20S)));
+    Fixups.push_back(MCFixup::create(0,Op.getExpr(),MCFixupKind(JRISCdev::FK_PC_REL_20S)));
     return 0;
 }
 
