@@ -27,15 +27,7 @@ MCOperand JRISCdevMCInstLower::lowerOperand(const MachineOperand &MO) const{
         case MachineOperand::MO_GlobalAddress:
         {
             const GlobalValue *GV = MO.getGlobal();
-            SmallString<256> Name;
-            if(GV->hasPrivateLinkage()){
-                Name.append(".");
-            }
-            else{
-                Name.append("@");
-            }
-            Name.append(GV->getName());
-            MCSymbol *sy = ctx->getOrCreateSymbol(Name.str());
+            MCSymbol *sy = ctx->getOrCreateSymbol(GV->getName());
             const MCSymbolRefExpr *MCSym = MCSymbolRefExpr::create(sy,*ctx);
             return MCOperand::createExpr(MCSym);
         }
