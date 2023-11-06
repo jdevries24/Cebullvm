@@ -37,8 +37,6 @@ namespace{
                         return ELF::EF_JRISC_24S;
                     case JRISCdev::FK_PC_REL_20S:
                         return ELF::EF_JRISC_20S;
-                    case JRISCdev::FK_PC_REL_16S:
-                        return ELF::EF_JRISC_16S;
                     default:
                         llvm_unreachable("Unexpected Fixup type for JRISC");
                 }
@@ -90,8 +88,18 @@ namespace{
 
         uint64_t Fix_PC_REL_20S(const MCAssembler &Asm, const MCFixup &Fixup,
                                 const MCValue &Target, MutableArrayRef<char> Data,
-                                uint64_t Value, bool IsResolved,
-                                const MCSubtargetInfo *STI)const;
+                                uint64_t V, bool IsResolved,
+                                const MCSubtargetInfo *STI)const{
+                                    int64_t Value = (int64_t) V;
+                                    if(Value < 0){
+                                        Value *= -1;
+                                        Value |= 0x80000;
+                                    }
+                                    uint64_t off = Fixup.getOffset() + 1;
+                                    Data[off + 0] |= (uint8_t) (Value >> 16) & 0xf;
+                                    Data[off + 1] |= (uint8_t) (Value >> 8) & 0xff;
+                                    Data[off + 2] |= (uint8_t) (Value & 0xf);
+                                };
 
         uint64_t Fix_PC_REL_16S(const MCAssembler &Asm, const MCFixup &Fixup,
                                 const MCValue &Target, MutableArrayRef<char> Data,
@@ -122,6 +130,9 @@ namespace{
                                             break;
                                         case JRISCdev::FK_PC_REL_16S:
                                             Fix_PC_REL_16S(Asm,Fixup,Target,Data,Value,IsResolved,STI);
+                                            break;
+                                        case JRISCdev::FK_PC_REL_20S:
+                                            Fix_PC_REL_20S(Asm,Fixup,Target,Data,Value,IsResolved,STI);
                                             break;
                                         default:
                                             llvm_unreachable("Unknown fixup type");
