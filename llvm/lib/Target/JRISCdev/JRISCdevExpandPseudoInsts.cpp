@@ -18,6 +18,13 @@ namespace{
         public:
             JRISCdevExpandPseudo():MachineFunctionPass(ID){};
             bool runOnMachineFunction(MachineFunction &MF) override;
+            
+            
+            void getAnalysisUsage(AnalysisUsage &AU) const override {
+                AU.setPreservesCFG();
+                MachineFunctionPass::getAnalysisUsage(AU);
+            }
+            
         private:
             bool expandMBB(MachineBasicBlock &MBB);
             bool expandMI(MachineBasicBlock &MBB,MachineBasicBlock::iterator MBBI,MachineBasicBlock::iterator &NextMBBI);
@@ -80,22 +87,33 @@ namespace{
         MachineFunction *MF = MBB.getParent();
         MachineInstr &MI = *MBBI;
         DebugLoc DL = MI.getDebugLoc();
+        MachineBasicBlock *FalseBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
         MachineBasicBlock *MergeBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
-        MF->insert(++MBB.getIterator(),MergeBB);
+
+        MF->insert(++MBB.getIterator(),FalseBB);
+        MF->insert(++FalseBB->getIterator(),MergeBB);
+
         if(MI.getOperand(0).getReg().id() != MI.getOperand(3).getReg().id()){
             BuildMI(MBB,MBBI,DL,TII->get(JRISCdev::MOV)).addReg(MI.getOperand(0).getReg()).addReg(MI.getOperand(3).getReg());
         }
+
         BuildMI(MBB,MBBI,DL,TII->get(getSelectCMPIns(MI.getOpcode())))
         .addReg(MI.getOperand(1).getReg())
         .addReg(MI.getOperand(2).getReg())
         .addMBB(MergeBB);
-        BuildMI(MBB,MBBI,DL,TII->get(JRISCdev::MOV)).addReg(MI.getOperand(0).getReg()).addReg(MI.getOperand(4).getReg());
+
+        BuildMI(FalseBB,DL,TII->get(JRISCdev::MOV)).addReg(MI.getOperand(0).getReg()).addReg(MI.getOperand(4).getReg());
+        
+        FalseBB->addSuccessor(MergeBB);
         MergeBB->splice(MergeBB->end(),&MBB,MI,MBB.end());
         MergeBB->transferSuccessors(&MBB);
         MBB.addSuccessor(MergeBB);
+        MBB.addSuccessor(FalseBB);
+
         NextMBBI = MBB.end();
         LivePhysRegs LiveRegs;
         MI.eraseFromParent();
+        computeAndAddLiveIns(LiveRegs,*FalseBB);
         computeAndAddLiveIns(LiveRegs,*MergeBB);
         return true;
     }
