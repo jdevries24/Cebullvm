@@ -18,6 +18,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
@@ -34,7 +35,6 @@ namespace llvm{
             void emitInstruction(const MachineInstr *MI) override;
             void emitFunctionBodyStart() override;
             void emitFunctionEntryLabel() override;
-            void emitGlobalVariable(const GlobalVariable *GV) override;
     };
 }
 
