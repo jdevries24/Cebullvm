@@ -37,6 +37,8 @@ namespace{
                         return ELF::EF_JRISC_24S;
                     case JRISCdev::FK_PC_REL_20S:
                         return ELF::EF_JRISC_20S;
+                    case MCFixupKind::FK_Data_4:
+                        return ELF::EF_JRISC_32U;
                     default:
                         llvm_unreachable("Unexpected Fixup type for JRISC");
                 }
@@ -133,6 +135,8 @@ namespace{
                                             break;
                                         case JRISCdev::FK_PC_REL_20S:
                                             Fix_PC_REL_20S(Asm,Fixup,Target,Data,Value,IsResolved,STI);
+                                            break;
+                                        case MCFixupKind::FK_Data_4:
                                             break;
                                         default:
                                             llvm_unreachable("Unknown fixup type");
