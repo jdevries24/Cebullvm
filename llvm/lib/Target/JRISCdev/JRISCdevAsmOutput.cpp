@@ -203,11 +203,17 @@ void JRISCdevAsmOutput::emitGlobalAgg(const DataLayout &DL,const ConstantAggrega
 }
 
 void JRISCdevAsmOutput::emitGlobalSeq(const DataLayout &DL,const ConstantDataSequential *CV,const Constant *BaseCV){
-    if(CV->isString()){
-        OS << "BYTES \"" << CV->getAsString() << "\"";
+    if(CV->isCString()){
+        OS << "BYTE \"";
         for(unsigned i = 0;i < CV->getNumElements();i += 1){
             if(CV->getElementAsInteger(i) == 0){
-                OS << ",0";
+                OS << "\",0";
+            }
+            else if((char)CV->getElementAsInteger(i) == '\n'){
+                OS << "\\n";
+            }
+            else{
+                OS << (char)CV->getElementAsInteger(i);
             }
         }
     }
