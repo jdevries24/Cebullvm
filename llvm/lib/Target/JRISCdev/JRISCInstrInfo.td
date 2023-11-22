@@ -163,16 +163,16 @@ def DIV:MathR<0x3D,"DIV",udiv>;
 def SDIV:MathR<0x3F,"SDIV",sdiv>;
 
 def LDB:LDR<0x10,"LDB",[(set i32:$dest , (zextloadi8 i32:$src))]>;
-def LDBS:LDR<0x14,"LDBS",[(set i32:$dest , (sextloadi8 i32:$src))]>;
+def LDBS:LDR<0x14,"LDBS",[(set i32:$dest , (extloadi8 i32:$src))]>;
 def LDH:LDR<0x11,"LDH",[(set i32:$dest , (zextloadi16 i32:$src))]>;
-def LDHS:LDR<0x15,"LDHS",[(set i32:$dest , (sextloadi16 i32:$src))]>;
+def LDHS:LDR<0x15,"LDHS",[(set i32:$dest , (extloadi16 i32:$src))]>;
 def LDW:LDR<0x12,"LDW",[(set i32:$dest , (load i32:$src))]>;
-def LDWS:LDR<0x16,"LDWS",[(set i32:$dest , (extload i32:$src))]>;
+def LDWS:LDR<0x16,"LDWS",[(set i32:$dest , (extloadi32 i32:$src))]>;
 
 def LDBI:LOADI<0x20,"LDBI",[(set i32:$dest , (zextloadi8 addr:$src))]>;
-def LDBSI:LOADI<0x24,"LDBSI",[(set i32:$dest , (sextloadi8 addr:$src))]>;
+def LDBSI:LOADI<0x24,"LDBSI",[(set i32:$dest , (extloadi8 addr:$src))]>;
 def LDHI:LOADI<0x21,"LDHI",[(set i32:$dest , (zextloadi16 addr:$src))]>;
-def LDHSI:LOADI<0x25,"LDHSI",[(set i32:$dest , (sextloadi16 addr:$src))]>;
+def LDHSI:LOADI<0x25,"LDHSI",[(set i32:$dest , (extloadi16 addr:$src))]>;
 def LDWI:LOADI<0x22,"LDWI",[(set i32:$dest , (load addr:$src))]>;
 def LDWSI:LOADI<0x26,"LDWSI",[(set i32:$dest , (extload addr:$src))]>;
 
@@ -242,7 +242,7 @@ def LEA:Instruction{
     bits<32> Inst;
     bits<20> loc;
     bits<4> dest;
-    let Inst{31-24} = 0x74;
+    let Inst{31-24} = 0x71;
     let Inst{23-20} = dest;
     let Inst{19-0} = loc;
     let isCall = 1;
@@ -303,6 +303,7 @@ def SELECT_GT:SEL_PAT<SETUGT,"GT">;
 def SELECT_SGT:SEL_PAT<SETGT,"SGT">;
 def CALLSTACKDOWN : LongINS<0x00,(outs),(ins i32imm:$amt,i32imm:$amt2),"ERROR!",[(callseq_start timm:$amt,timm:$amt2)]>;
 def CALLSTACKUP:LongINS<0x00,(outs),(ins i32imm:$amt,i32imm:$amt2),"ERROR!",[(callseq_end timm:$amt,timm:$amt2)]>;
+def LARGEMOVE:LongINS<0x00,(outs GPReg:$dest),(ins i32imm:$imm),"LARGEMOV",[]>;
 }
 
 def MOV:Instruction{
@@ -314,7 +315,8 @@ def MOV:Instruction{
     let Pattern = [];
     bits<16> Inst;
     bits<4> dest;bits<4> src;
-    let Inst{15-8} = 0x4f;
+    let Inst{15-8} = 0x3f;
     let Inst{7-4} = dest;
     let Inst{3-0} = src;
 }
+

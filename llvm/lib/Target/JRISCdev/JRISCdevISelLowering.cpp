@@ -65,6 +65,7 @@ SDValue JRISCdevILowering::LowerGlobalAddr(SDValue Op,SelectionDAG &DAG,SDLoc dl
   return DAG.getNode(JRISCdevID::LOAD_SYM,dl,VT,TargetAddr);
 }
 
+
 ISD::CondCode JRISCdevILowering::getCondCode(ISD::CondCode CC) const{
   switch(CC){
     case ISD::SETGE:

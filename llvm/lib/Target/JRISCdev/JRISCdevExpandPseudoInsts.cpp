@@ -19,16 +19,11 @@ namespace{
             JRISCdevExpandPseudo():MachineFunctionPass(ID){};
             bool runOnMachineFunction(MachineFunction &MF) override;
             
-            
-            void getAnalysisUsage(AnalysisUsage &AU) const override {
-                AU.setPreservesCFG();
-                MachineFunctionPass::getAnalysisUsage(AU);
-            }
-            
         private:
             bool expandMBB(MachineBasicBlock &MBB);
             bool expandMI(MachineBasicBlock &MBB,MachineBasicBlock::iterator MBBI,MachineBasicBlock::iterator &NextMBBI);
             bool expandSelect(MachineBasicBlock &MBB,MachineBasicBlock::iterator MBBI,MachineBasicBlock::iterator &NextMBBI);
+            bool expandLargeMOV(MachineBasicBlock &MBB,MachineBasicBlock::iterator MBBI);
             unsigned getSelectCMPIns(unsigned OP);
     };
 
@@ -65,11 +60,27 @@ namespace{
             case JRISCdev::SELECT_SGT:
             case JRISCdev::SELECT_SLT:
                 return expandSelect(MBB,MBBI,NextMBBI);
+            case JRISCdev::LARGEMOVE:
+                return expandLargeMOV(MBB,MBBI);
             default:
                 return false;
         }
     }
 
+    bool JRISCdevExpandPseudo::expandLargeMOV(MachineBasicBlock &MBB,MachineBasicBlock::iterator MBBI){
+        MachineInstr &MI = *MBBI;
+        Register Reg = MI.getOperand(0).getReg();
+        int64_t imm = MI.getOperand(1).getImm();
+        DebugLoc DL = MI.getDebugLoc();
+        int64_t high = (imm >> 16) & 0xffff;
+        BuildMI(MBB,MBBI,DL,TII->get(JRISCdev::ADDI)).addReg(Reg)
+        .addReg(JRISCdev::R0)
+        .addImm(high);
+        BuildMI(MBB,MBBI,DL,TII->get(JRISCdev::LSLI),Reg).addReg(Reg).addImm(16);
+        BuildMI(MBB,MBBI,DL,TII->get(JRISCdev::ORRI),Reg).addReg(Reg).addImm(imm & 0xffff);
+        MI.eraseFromParent();
+        return true;
+    }
     unsigned JRISCdevExpandPseudo::getSelectCMPIns(unsigned Op){
         switch(Op){
             case JRISCdev::SELECT_EQ:return JRISCdev::JME;
@@ -82,6 +93,7 @@ namespace{
                 llvm_unreachable("Non Select Intstruction");
         }
     }
+
 
     bool JRISCdevExpandPseudo::expandSelect(MachineBasicBlock &MBB,MachineBasicBlock::iterator MBBI,MachineBasicBlock::iterator &NextMBBI){
         MachineFunction *MF = MBB.getParent();
