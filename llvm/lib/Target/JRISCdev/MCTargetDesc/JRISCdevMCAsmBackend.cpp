@@ -28,7 +28,7 @@ namespace{
     class JRISCdevObjectWriter:public MCELFObjectTargetWriter{
         public:
             JRISCdevObjectWriter(uint8_t OSABI)
-            :MCELFObjectTargetWriter(/*is64Bit*/false,OSABI,/*ELF::EM_ARM*/ELF::EM_ARM,/*hasRelocationAddend*/false){}
+            :MCELFObjectTargetWriter(/*is64Bit*/false,OSABI,/*ELF::EM_ARM*/ELF::EM_JRISCdev,/*hasRelocationAddend*/false){}
             ~JRISCdevObjectWriter() override;
         protected:
             unsigned getRelocType(MCContext &Ctx,const MCValue &Target,const MCFixup &Fixup,bool IsPCRel) const override{
@@ -108,13 +108,13 @@ namespace{
                                 uint64_t V, bool IsResolved,
                                 const MCSubtargetInfo *STI)const{
                                     int64_t Value = (int64_t) V;
-                                    if(Value > 0){
+                                    if(Value < 0){
                                         Value *= -1;
                                         Value |= 0x8000;
                                     }
                                     uint64_t off = Fixup.getOffset() + 2;
-                                    Data[off + 0] = (uint8_t) (V >> 8) & 0xff;
-                                    Data[off + 1] = (uint8_t) V & 0xff;
+                                    Data[off + 0] = (uint8_t) (Value >> 8) & 0xff;
+                                    Data[off + 1] = (uint8_t) Value & 0xff;
                                 }
 
         uint64_t Fix_PC_REL_32U(const MCAssembler &Asm, const MCFixup &Fixup,
