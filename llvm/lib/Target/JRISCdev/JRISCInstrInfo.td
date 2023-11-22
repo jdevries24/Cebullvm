@@ -289,6 +289,7 @@ class SEL_PAT<CondCode cc,string CondStr>:Instruction{
     let InOperandList = (ins GPReg:$cond1,GPReg:$cond2,GPReg:$true,GPReg:$false);
     let AsmString = !strconcat("$res = ($cond1 ",CondStr, " $cond2) ? $true : $false");
     let Pattern = [(set i32:$res , (selectcc i32:$cond1, i32:$cond2 , i32:$true, i32:$false,cc))];
+    let Constraints = "$res != $true";
 }
 
 

@@ -106,7 +106,7 @@ namespace{
         MF->insert(++FalseBB->getIterator(),MergeBB);
 
         if(MI.getOperand(0).getReg().id() != MI.getOperand(3).getReg().id()){
-            BuildMI(MBB,MBBI,DL,TII->get(JRISCdev::MOV)).addReg(MI.getOperand(0).getReg()).addReg(MI.getOperand(3).getReg());
+            llvm_unreachable("Phudo select doesnt match");
         }
 
         BuildMI(MBB,MBBI,DL,TII->get(getSelectCMPIns(MI.getOpcode())))
