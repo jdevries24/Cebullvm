@@ -264,6 +264,12 @@ void JRISCdevAsmOutput::emitGlobalConstant(const DataLayout &DL,const Constant *
         }
         emitGlobalAgg(DL,CS,BaseCV);
     }
+    else if(dyn_cast<ConstantPointerNull>(CV)){
+        OS << "WORD 0";
+    }
+    else{
+        llvm_unreachable("unknown var type");
+    }
 }
 
 MCOperand JRISCdevAsmOutput::lowerOperand(const MachineOperand &MO) const {
