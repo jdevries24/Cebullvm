@@ -59,6 +59,10 @@ namespace{
             case JRISCdev::SELECT_NE:
             case JRISCdev::SELECT_SGT:
             case JRISCdev::SELECT_SLT:
+            case JRISCdev::SELECT_GE:
+            case JRISCdev::SELECT_SGE:
+            case JRISCdev::SELECT_LE:
+            case JRISCdev::SELECT_SLE:
                 return expandSelect(MBB,MBBI,NextMBBI);
             case JRISCdev::LARGEMOVE:
                 return expandLargeMOV(MBB,MBBI);
@@ -89,6 +93,10 @@ namespace{
             case JRISCdev::SELECT_LT:return JRISCdev::JLT;
             case JRISCdev::SELECT_SGT:return JRISCdev::JSGT;
             case JRISCdev::SELECT_SLT:return JRISCdev::JSLT;
+            case JRISCdev::SELECT_GE:return JRISCdev::JGE;
+            case JRISCdev::SELECT_SGE:return JRISCdev::JSGE;
+            case JRISCdev::SELECT_LE:return JRISCdev::JLE;
+            case JRISCdev::SELECT_SLE:return JRISCdev::JSLE;
             default:
                 llvm_unreachable("Non Select Intstruction");
         }

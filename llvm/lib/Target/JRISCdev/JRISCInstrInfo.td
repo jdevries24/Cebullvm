@@ -162,19 +162,20 @@ def SMOD:MathR<0x3C,"SMOD",srem>;
 def DIV:MathR<0x3D,"DIV",udiv>;
 def SDIV:MathR<0x3F,"SDIV",sdiv>;
 
-def LDB:LDR<0x10,"LDB",[(set i32:$dest , (zextloadi8 i32:$src))]>;
-def LDBS:LDR<0x14,"LDBS",[(set i32:$dest , (extloadi8 i32:$src))]>;
-def LDH:LDR<0x11,"LDH",[(set i32:$dest , (zextloadi16 i32:$src))]>;
-def LDHS:LDR<0x15,"LDHS",[(set i32:$dest , (extloadi16 i32:$src))]>;
-def LDW:LDR<0x12,"LDW",[(set i32:$dest , (load i32:$src))]>;
-def LDWS:LDR<0x16,"LDWS",[(set i32:$dest , (extloadi32 i32:$src))]>;
 
-def LDBI:LOADI<0x20,"LDBI",[(set i32:$dest , (zextloadi8 addr:$src))]>;
-def LDBSI:LOADI<0x24,"LDBSI",[(set i32:$dest , (extloadi8 addr:$src))]>;
-def LDHI:LOADI<0x21,"LDHI",[(set i32:$dest , (zextloadi16 addr:$src))]>;
-def LDHSI:LOADI<0x25,"LDHSI",[(set i32:$dest , (extloadi16 addr:$src))]>;
+def LDBS:LDR<0x14,"LDBS",[(set i32:$dest , (sextloadi8 i32:$src))]>;
+def LDB:LDR<0x10,"LDB",[(set i32:$dest , (Jloadi8 i32:$src))]>;
+def LDHS:LDR<0x15,"LDHS",[(set i32:$dest , (sextloadi16 i32:$src))]>;
+def LDH:LDR<0x11,"LDH",[(set i32:$dest , (Jloadi16 i32:$src))]>;
+def LDWS:LDR<0x16,"LDWS",[(set i32:$dest , (sextloadi32 i32:$src))]>;
+def LDW:LDR<0x12,"LDW",[(set i32:$dest , (load i32:$src))]>;
+
+def LDBSI:LOADI<0x24,"LDBSI",[(set i32:$dest , (sextloadi8 addr:$src))]>;
+def LDBI:LOADI<0x20,"LDBI",[(set i32:$dest , (Jloadi8 addr:$src))]>;
+def LDHSI:LOADI<0x25,"LDHSI",[(set i32:$dest , (sextloadi16 addr:$src))]>;
+def LDHI:LOADI<0x21,"LDHI",[(set i32:$dest , (Jloadi16 addr:$src))]>;
+def LDWSI:LOADI<0x26,"LDWSI",[(set i32:$dest , (sextload addr:$src))]>;
 def LDWI:LOADI<0x22,"LDWI",[(set i32:$dest , (load addr:$src))]>;
-def LDWSI:LOADI<0x26,"LDWSI",[(set i32:$dest , (extload addr:$src))]>;
 
 
 def STB:STRR<0x18,"STB",[(truncstorevi8 i32:$src , i32:$dest)]>;
@@ -188,13 +189,17 @@ def STWI:STRI<0x2A,"STWI",[(store i32:$src , addr:$dest)]>;
 
 let isTerminator = 1,isBranch = 1 in {
 def JNE:JRISC_br<0x52,"JNE",SETUNE>;
-def JME:JRISC_br<0x51,"JME",SETUEQ>;
+def JME:JRISC_br<0x51,"JEQ",SETUEQ>;
 def JLT:JRISC_br<0x53,"JLT",SETULT>;
 def JGT:JRISC_br<0x54,"JGT",SETUGT>;
+def JLE:JRISC_br<0x55,"JLE",SETUGE>;
+def JGE:JRISC_br<0x56,"JGE",SETULE>;
 def JSNE:JRISC_br<0x62,"JSNE",SETNE>;
-def JSME:JRISC_br<0x61,"JSME",SETEQ>;
+def JSME:JRISC_br<0x61,"JSEQ",SETEQ>;
 def JSLT:JRISC_br<0x63,"JSLT",SETLT>;
 def JSGT:JRISC_br<0x64,"JSGT",SETGT>;
+def JSLE:JRISC_br<0x65,"JSLE",SETLE>;
+def JSGE:JRISC_br<0x66,"JSGE",SETGE>;
 }
 
 
@@ -298,10 +303,14 @@ class SEL_PAT<CondCode cc,string CondStr>:Instruction{
 let isPseudo = 1 in {
 def SELECT_LT:SEL_PAT<SETULT,"LT">;
 def SELECT_SLT:SEL_PAT<SETLT,"SLT">;
+def SELECT_LE:SEL_PAT<SETULE,"LE">;
+def SELECT_SLE:SEL_PAT<SETLE,"SLE">;
 def SELECT_EQ:SEL_PAT<SETEQ,"EQ">;
 def SELECT_NE:SEL_PAT<SETNE,"NE">;
 def SELECT_GT:SEL_PAT<SETUGT,"GT">;
 def SELECT_SGT:SEL_PAT<SETGT,"SGT">;
+def SELECT_GE:SEL_PAT<SETULE,"GE">;
+def SELECT_SGE:SEL_PAT<SETGE,"SGE">;
 def CALLSTACKDOWN : LongINS<0x00,(outs),(ins i32imm:$amt,i32imm:$amt2),"ERROR!",[(callseq_start timm:$amt,timm:$amt2)]>;
 def CALLSTACKUP:LongINS<0x00,(outs),(ins i32imm:$amt,i32imm:$amt2),"ERROR!",[(callseq_end timm:$amt,timm:$amt2)]>;
 def LARGEMOVE:LongINS<0x00,(outs GPReg:$dest),(ins i32imm:$imm),"LARGEMOV",[]>;
