@@ -34,10 +34,10 @@ JRISCdevILowering::JRISCdevILowering(const TargetMachine &TM,const JRISCdevSubta
   addRegisterClass(MVT::i32,&JRISCdev::GPregsRegClass);
   computeRegisterProperties(STI.getRegisterInfo());
   setJumpIsExpensive(false);
-  setOperationAction(ISD::SELECT_CC,MVT::i32,Custom);
+  //setOperationAction(ISD::SELECT_CC,MVT::i32,Custom);
   setOperationAction(ISD::ROTL,MVT::i32,Custom);
   setOperationAction(ISD::ROTR,MVT::i32,Custom);
-  setOperationAction(ISD::BR_CC,MVT::i32,Custom);
+  //setOperationAction(ISD::BR_CC,MVT::i32,Custom);
   setOperationAction(ISD::Constant,MVT::i32,Custom);
   setOperationAction(ISD::GlobalAddress,MVT::i32,Custom);
   setOperationAction(ISD::SETCC,MVT::i32,Expand);
@@ -45,7 +45,7 @@ JRISCdevILowering::JRISCdevILowering(const TargetMachine &TM,const JRISCdevSubta
   setOperationAction(ISD::SIGN_EXTEND_INREG,MVT::i16,Custom);
   setOperationAction(ISD::BR_JT,MVT::Other,Expand);
   setOperationAction(ISD::BRIND,MVT::Other,Expand);
-  setOperationAction(ISD::BRCOND,MVT::Other,Custom);
+  //setOperationAction(ISD::BRCOND,MVT::Other,Custom);
 }
 
 SDValue JRISCdevILowering::LowerConst(SDValue Op,SelectionDAG &DAG) const{
@@ -86,6 +86,7 @@ ISD::CondCode JRISCdevILowering::getCondCode(ISD::CondCode CC) const{
 }
 
 bool JRISCdevILowering::needsSwap(ISD::CondCode CC) const{
+	llvm_unreachable("Should not be asking about swap!\n");
   switch(CC){
     case ISD::SETGE:
     case ISD::SETUGE:
